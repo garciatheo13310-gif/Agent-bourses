@@ -3,7 +3,12 @@ import sys
 import yfinance as yf
 import pandas as pd
 import smtplib
-import ollama
+try:
+    import ollama
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    OLLAMA_AVAILABLE = False
+    print("⚠️  Ollama non disponible - l'analyse IA sera limitée")
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
@@ -587,7 +592,7 @@ def get_technical_data(candidate):
         df['Close'] = df['Close'].ffill().bfill()
         if df['Close'].isna().all():
             return None
-        
+            
         # Calcul RSI
         rsi_series = calculate_rsi(df['Close'], period=14)
         if rsi_series.empty or rsi_series.isna().all():
@@ -809,10 +814,27 @@ def ask_ai_opinion(data):
     Sois précis, professionnel et factuel dans ton analyse.
     """
     try:
+        if not OLLAMA_AVAILABLE:
+            # Fallback si Ollama n'est pas disponible (ex: sur Streamlit Cloud)
+            return f"""
+ANALYSE AUTOMATIQUE (Ollama non disponible en ligne):
+
+📊 RÉSUMÉ FONDAMENTAL:
+- Croissance CA: {data.get('revenue_growth', 0)}% | Croissance bénéfices: {data.get('earnings_growth', 0)}%
+- ROE: {data.get('roe', 0)}% | Marge bénéficiaire: {data.get('profit_margin', 0)}%
+- PER: {data.get('pe', 'N/A')} | PEG: {data.get('peg', 'N/A')}
+
+📈 RÉSUMÉ TECHNIQUE:
+- RSI: {data.get('rsi', 'N/A')} | Tendance: {data.get('trend', 'N/A')}
+- Prix actuel: {data.get('current_price_eur', data.get('current_price', 'N/A'))} €
+- Zone d'achat: {data.get('buy_zone_low_eur', 'N/A')} - {data.get('buy_zone_high_eur', 'N/A')} €
+
+💡 NOTE: Pour une analyse IA complète, utilisez l'application en local avec Ollama installé.
+            """
         response = ollama.chat(model='mistral', messages=[{'role': 'user', 'content': prompt}])
         return response['message']['content'].strip()
     except Exception as e:
-        return f"Erreur analyse IA: {str(e)}"
+        return f"Erreur analyse IA: {str(e)}. Note: Ollama nécessite un serveur local pour fonctionner."
 
 # --- 6. ENVOI EMAIL ---
 def send_email(body, count):
