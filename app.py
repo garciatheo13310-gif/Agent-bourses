@@ -517,187 +517,187 @@ with tab_analyse:
         status_container = st.container()
         progress_bar = st.progress(0)
         status_text = st.empty()
-    
-    with status_container:
-        st.info("🔄 **Analyse en cours...** Ne fermez pas cette page. L'analyse peut prendre plusieurs minutes.")
-    
-    # Récupération des listes (MARCHÉS MONDAUX)
-    status_text.text("📥 Récupération des listes d'actions (MARCHÉS MONDAUX)...")
-    progress_bar.progress(5)
-    us_tickers = get_sp500_tickers()
-    progress_bar.progress(8)
-    nasdaq_tickers = get_nasdaq100_tickers()
-    progress_bar.progress(11)
-    dow_tickers = get_dowjones_tickers()
-    progress_bar.progress(14)
-    eu_tickers = get_eurostoxx_tickers()
-    progress_bar.progress(17)
-    emerging_tickers = get_emerging_markets_tickers()
-    progress_bar.progress(20)
-    asia_tickers = get_asia_pacific_tickers()
-    progress_bar.progress(23)
-    canada_tickers = get_canada_tickers()
-    
-    # Fusionner toutes les listes
-    all_tickers = list(set(
-        us_tickers + nasdaq_tickers + dow_tickers + eu_tickers + 
-        emerging_tickers + asia_tickers + canada_tickers
-    ))
-    progress_bar.progress(25)
-    status_text.text(f"✅ {len(us_tickers)} S&P500, {len(nasdaq_tickers)} NASDAQ, {len(dow_tickers)} Dow, {len(eu_tickers)} EU, {len(emerging_tickers)} Émergents, {len(asia_tickers)} Asie, {len(canada_tickers)} Canada")
-    
-    # Filtrage avec progression
-    status_text.text(f"🔍 Analyse de {len(all_tickers[:limit])} actions... (2-5 minutes)")
-    progress_bar.progress(25)
-    
-    # Utiliser tqdm pour suivre la progression dans screen_stocks avec les paramètres personnalisés
-    opportunities = screen_stocks(
-        all_tickers[:limit],
-        min_revenue_growth=min_revenue_growth,
-        min_earnings_growth=min_earnings_growth,
-        min_roe=min_roe,
-        min_profit_margin=min_profit_margin,
-        min_pe_ratio=min_pe_ratio,
-        max_pe_ratio=max_pe_ratio,
-        min_peg_ratio=min_peg_ratio,
-        max_peg_ratio=max_peg_ratio
-    )
-    progress_bar.progress(50)
-    
-    if opportunities:
-        status_text.text(f"✅ {len(opportunities)} opportunités trouvées")
-    else:
-        status_text.text("⚠️ Aucune opportunité trouvée avec ces critères")
-        progress_bar.progress(100)
-        st.warning("⚠️ Aucune opportunité trouvée avec ces critères")
-        st.stop()
-    
-    # Scoring et classement
-    status_text.text(f"🏆 Classement et sélection des TOP {TOP_N}...")
-    progress_bar.progress(60)
-    top_stocks = score_and_rank_stocks(opportunities)
-    
-    # Analyse technique avec progression
-    status_text.text(f"📊 Analyse technique de {len(top_stocks)} actions...")
-    progress_bar.progress(65)
-    stocks_with_tech = []
-    for i, stock in enumerate(top_stocks, 1):
-        progress_bar.progress(65 + int((i / len(top_stocks)) * 15))
-        status_text.text(f"📊 Analyse technique {i}/{len(top_stocks)}: {stock.get('symbol', 'N/A')}...")
-        full_data = get_technical_data(stock)
-        if full_data:
-            stocks_with_tech.append(full_data)
-    
-    # Analyse IA avec progression
-    status_text.text(f"🧠 Analyse IA avec Mistral pour {len(stocks_with_tech)} actions...")
-    progress_bar.progress(85)
-    final_results = []
-    for i, stock in enumerate(stocks_with_tech, 1):
-        progress_bar.progress(85 + int((i / len(stocks_with_tech)) * 10))
-        status_text.text(f"🧠 Analyse IA {i}/{len(stocks_with_tech)}: {stock.get('symbol', 'N/A')}...")
-        avis_ia = ask_ai_opinion(stock)
-        stock['avis_ia'] = avis_ia
-        final_results.append(stock)
-    
-    # Génération du rapport email
-    status_text.text("📧 Génération du rapport email...")
-    progress_bar.progress(98)
-    
-    # Créer le rapport pour l'email (format similaire à main.py)
-    report = f"\n{'='*70}\n"
-    report += f"📊 RAPPORT BOURSE MONDIALE - ANALYSE APPROFONDIE\n"
-    report += f"🏆 TOP {len(final_results)} MEILLEURES ACTIONS\n"
-    report += f"📅 Date: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
-    report += f"{'='*70}\n\n"
-    
-    for idx, stock in enumerate(final_results, 1):
-        avis = stock.get('avis_ia', 'N/A')
-        block = f"\n{'='*70}"
-        block += f"\n🏆 RANG #{idx} - SCORE: {stock.get('score', 0)}/100"
-        block += f"\n{'='*70}"
-        block += f"\n🏢 {stock.get('name', 'N/A')} ({stock.get('symbol', 'N/A')}) | Secteur: {stock.get('sector', 'N/A')}"
-        block += f"\n💰 PRIX ACTUEL: {stock.get('current_price_eur', 'N/A')} €"
-        block += f"\n📊 CROISSANCE CA: {stock.get('revenue_growth', 0)}% | ROE: {stock.get('roe', 0)}%"
-        block += f"\n🎯 ZONE D'ACHAT: {stock.get('buy_zone_low_eur', 'N/A')} € - {stock.get('buy_zone_high_eur', 'N/A')} €"
-        block += f"\n🤖 ANALYSE IA:\n{avis}\n"
-        block += f"\n{'-'*70}\n"
-        report += block
-    
-    # Envoi email à l'utilisateur connecté
-    status_text.text("📧 Envoi du rapport par email...")
-    try:
-        # Récupérer l'email de l'utilisateur connecté
-        from database import get_user_email
-        user_email = None
-        if st.session_state.get('user_id'):
-            user_email = get_user_email(st.session_state['user_id'])
         
-        if user_email:
-            success = send_email(report, len(final_results), recipient_email=user_email)
-            if success:
-                status_text.text(f"✅ Email envoyé avec succès à {user_email} !")
-            else:
-                status_text.text(f"⚠️ Erreur lors de l'envoi de l'email à {user_email}")
+        with status_container:
+            st.info("🔄 **Analyse en cours...** Ne fermez pas cette page. L'analyse peut prendre plusieurs minutes.")
+        
+        # Récupération des listes (MARCHÉS MONDAUX)
+        status_text.text("📥 Récupération des listes d'actions (MARCHÉS MONDAUX)...")
+        progress_bar.progress(5)
+        us_tickers = get_sp500_tickers()
+        progress_bar.progress(8)
+        nasdaq_tickers = get_nasdaq100_tickers()
+        progress_bar.progress(11)
+        dow_tickers = get_dowjones_tickers()
+        progress_bar.progress(14)
+        eu_tickers = get_eurostoxx_tickers()
+        progress_bar.progress(17)
+        emerging_tickers = get_emerging_markets_tickers()
+        progress_bar.progress(20)
+        asia_tickers = get_asia_pacific_tickers()
+        progress_bar.progress(23)
+        canada_tickers = get_canada_tickers()
+        
+        # Fusionner toutes les listes
+        all_tickers = list(set(
+            us_tickers + nasdaq_tickers + dow_tickers + eu_tickers + 
+            emerging_tickers + asia_tickers + canada_tickers
+        ))
+        progress_bar.progress(25)
+        status_text.text(f"✅ {len(us_tickers)} S&P500, {len(nasdaq_tickers)} NASDAQ, {len(dow_tickers)} Dow, {len(eu_tickers)} EU, {len(emerging_tickers)} Émergents, {len(asia_tickers)} Asie, {len(canada_tickers)} Canada")
+        
+        # Filtrage avec progression
+        status_text.text(f"🔍 Analyse de {len(all_tickers[:limit])} actions... (2-5 minutes)")
+        progress_bar.progress(25)
+        
+        # Utiliser tqdm pour suivre la progression dans screen_stocks avec les paramètres personnalisés
+        opportunities = screen_stocks(
+            all_tickers[:limit],
+            min_revenue_growth=min_revenue_growth,
+            min_earnings_growth=min_earnings_growth,
+            min_roe=min_roe,
+            min_profit_margin=min_profit_margin,
+            min_pe_ratio=min_pe_ratio,
+            max_pe_ratio=max_pe_ratio,
+            min_peg_ratio=min_peg_ratio,
+            max_peg_ratio=max_peg_ratio
+        )
+        progress_bar.progress(50)
+        
+        if opportunities:
+            status_text.text(f"✅ {len(opportunities)} opportunités trouvées")
         else:
-            # Fallback vers l'email par défaut si pas d'email utilisateur
-            success = send_email(report, len(final_results))
-            if success:
-                status_text.text("✅ Email envoyé avec succès !")
+            status_text.text("⚠️ Aucune opportunité trouvée avec ces critères")
+            progress_bar.progress(100)
+            st.warning("⚠️ Aucune opportunité trouvée avec ces critères")
+            st.stop()
+        
+        # Scoring et classement
+        status_text.text(f"🏆 Classement et sélection des TOP {TOP_N}...")
+        progress_bar.progress(60)
+        top_stocks = score_and_rank_stocks(opportunities)
+        
+        # Analyse technique avec progression
+        status_text.text(f"📊 Analyse technique de {len(top_stocks)} actions...")
+        progress_bar.progress(65)
+        stocks_with_tech = []
+        for i, stock in enumerate(top_stocks, 1):
+            progress_bar.progress(65 + int((i / len(top_stocks)) * 15))
+            status_text.text(f"📊 Analyse technique {i}/{len(top_stocks)}: {stock.get('symbol', 'N/A')}...")
+            full_data = get_technical_data(stock)
+            if full_data:
+                stocks_with_tech.append(full_data)
+        
+        # Analyse IA avec progression
+        status_text.text(f"🧠 Analyse IA avec Mistral pour {len(stocks_with_tech)} actions...")
+        progress_bar.progress(85)
+        final_results = []
+        for i, stock in enumerate(stocks_with_tech, 1):
+            progress_bar.progress(85 + int((i / len(stocks_with_tech)) * 10))
+            status_text.text(f"🧠 Analyse IA {i}/{len(stocks_with_tech)}: {stock.get('symbol', 'N/A')}...")
+            avis_ia = ask_ai_opinion(stock)
+            stock['avis_ia'] = avis_ia
+            final_results.append(stock)
+        
+        # Génération du rapport email
+        status_text.text("📧 Génération du rapport email...")
+        progress_bar.progress(98)
+        
+        # Créer le rapport pour l'email (format similaire à main.py)
+        report = f"\n{'='*70}\n"
+        report += f"📊 RAPPORT BOURSE MONDIALE - ANALYSE APPROFONDIE\n"
+        report += f"🏆 TOP {len(final_results)} MEILLEURES ACTIONS\n"
+        report += f"📅 Date: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+        report += f"{'='*70}\n\n"
+        
+        for idx, stock in enumerate(final_results, 1):
+            avis = stock.get('avis_ia', 'N/A')
+            block = f"\n{'='*70}"
+            block += f"\n🏆 RANG #{idx} - SCORE: {stock.get('score', 0)}/100"
+            block += f"\n{'='*70}"
+            block += f"\n🏢 {stock.get('name', 'N/A')} ({stock.get('symbol', 'N/A')}) | Secteur: {stock.get('sector', 'N/A')}"
+            block += f"\n💰 PRIX ACTUEL: {stock.get('current_price_eur', 'N/A')} €"
+            block += f"\n📊 CROISSANCE CA: {stock.get('revenue_growth', 0)}% | ROE: {stock.get('roe', 0)}%"
+            block += f"\n🎯 ZONE D'ACHAT: {stock.get('buy_zone_low_eur', 'N/A')} € - {stock.get('buy_zone_high_eur', 'N/A')} €"
+            block += f"\n🤖 ANALYSE IA:\n{avis}\n"
+            block += f"\n{'-'*70}\n"
+            report += block
+        
+        # Envoi email à l'utilisateur connecté
+        status_text.text("📧 Envoi du rapport par email...")
+        try:
+            # Récupérer l'email de l'utilisateur connecté
+            from database import get_user_email
+            user_email = None
+            if st.session_state.get('user_id'):
+                user_email = get_user_email(st.session_state['user_id'])
+            
+            if user_email:
+                success = send_email(report, len(final_results), recipient_email=user_email)
+                if success:
+                    status_text.text(f"✅ Email envoyé avec succès à {user_email} !")
+                else:
+                    status_text.text(f"⚠️ Erreur lors de l'envoi de l'email à {user_email}")
             else:
-                status_text.text("⚠️ Erreur envoi email: Vérifiez la configuration email")
-    except Exception as e:
-        status_text.text(f"⚠️ Erreur envoi email: {e}")
-    
-    # Terminé
-    progress_bar.progress(100)
-    status_text.text(f"✅ **Analyse terminée !** {len(final_results)} actions analysées avec succès.")
-    st.success(f"✅ **Analyse terminée !** {len(final_results)} actions analysées avec succès.")
-    
-    # Stockage des résultats dans la session
-    st.session_state['results'] = final_results
-    st.session_state['scan_date'] = datetime.now().strftime('%d/%m/%Y %H:%M')
-    
-    # Sauvegarder l'analyse dans la base de données
-    if st.session_state.get('authenticated') and st.session_state.get('user_id'):
-        try:
-            save_analysis(
-                st.session_state['user_id'],
-                final_results,
-                st.session_state['scan_date']
-            )
+                # Fallback vers l'email par défaut si pas d'email utilisateur
+                success = send_email(report, len(final_results))
+                if success:
+                    status_text.text("✅ Email envoyé avec succès !")
+                else:
+                    status_text.text("⚠️ Erreur envoi email: Vérifiez la configuration email")
         except Exception as e:
-            st.warning(f"⚠️ Analyse sauvegardée en session mais erreur DB: {e}")
+            status_text.text(f"⚠️ Erreur envoi email: {e}")
+        
+        # Terminé
+        progress_bar.progress(100)
+        status_text.text(f"✅ **Analyse terminée !** {len(final_results)} actions analysées avec succès.")
+        st.success(f"✅ **Analyse terminée !** {len(final_results)} actions analysées avec succès.")
+        
+        # Stockage des résultats dans la session
+        st.session_state['results'] = final_results
+        st.session_state['scan_date'] = datetime.now().strftime('%d/%m/%Y %H:%M')
+        
+        # Sauvegarder l'analyse dans la base de données
+        if st.session_state.get('authenticated') and st.session_state.get('user_id'):
+            try:
+                save_analysis(
+                    st.session_state['user_id'],
+                    final_results,
+                    st.session_state['scan_date']
+                )
+            except Exception as e:
+                st.warning(f"⚠️ Analyse sauvegardée en session mais erreur DB: {e}")
 
-# Affichage des résultats
-if 'results' in st.session_state and st.session_state['results']:
-    all_results = st.session_state['results']
-    scan_date = st.session_state.get('scan_date', 'N/A')
-    
-    # Filtrer pour ne garder que les actions dans leur zone d'achat
-    def is_in_buy_zone(stock):
-        """Vérifie si le prix actuel est dans la zone d'achat recommandée"""
-        current_price = stock.get('current_price_eur')
-        buy_low = stock.get('buy_zone_low_eur')
-        buy_high = stock.get('buy_zone_high_eur')
+    # Affichage des résultats (dans l'onglet Analyse)
+    if 'results' in st.session_state and st.session_state['results']:
+        all_results = st.session_state['results']
+        scan_date = st.session_state.get('scan_date', 'N/A')
         
-        # Vérifier que toutes les valeurs sont disponibles et numériques
-        if current_price is None or buy_low is None or buy_high is None:
-            return False
+        # Filtrer pour ne garder que les actions dans leur zone d'achat
+        def is_in_buy_zone(stock):
+            """Vérifie si le prix actuel est dans la zone d'achat recommandée"""
+            current_price = stock.get('current_price_eur')
+            buy_low = stock.get('buy_zone_low_eur')
+            buy_high = stock.get('buy_zone_high_eur')
+            
+            # Vérifier que toutes les valeurs sont disponibles et numériques
+            if current_price is None or buy_low is None or buy_high is None:
+                return False
+            
+            try:
+                current = float(current_price)
+                low = float(buy_low)
+                high = float(buy_high)
+                return low <= current <= high
+            except (ValueError, TypeError):
+                return False
         
-        try:
-            current = float(current_price)
-            low = float(buy_low)
-            high = float(buy_high)
-            return low <= current <= high
-        except (ValueError, TypeError):
-            return False
-    
-    # Filtrer les résultats
-    results = [stock for stock in all_results if is_in_buy_zone(stock)]
-    
-    st.markdown("---")
-    if results:
-        st.markdown(f"""
+        # Filtrer les résultats
+        results = [stock for stock in all_results if is_in_buy_zone(stock)]
+        
+        st.markdown("---")
+        if results:
+            st.markdown(f"""
             <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                         padding: 2rem; 
                         border-radius: 20px; 
