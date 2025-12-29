@@ -825,8 +825,14 @@ def ask_ai_opinion(data):
         earnings_growth = data.get('earnings_growth', 0) * 100
         roe = data.get('roe', 0) * 100
         profit_margin = data.get('profit_margin', 0) * 100
-        pe = data.get('pe', 999)
-        peg = data.get('peg', 999)
+        
+        # Gérer les valeurs None ou invalides pour pe et peg
+        pe_raw = data.get('pe', 999)
+        pe = pe_raw if isinstance(pe_raw, (int, float)) and pe_raw != 999 else 999
+        
+        peg_raw = data.get('peg', 999)
+        peg = peg_raw if isinstance(peg_raw, (int, float)) and peg_raw != 999 else 999
+        
         price_to_book = data.get('price_to_book', 'N/A')
         
         rsi = data.get('rsi', 50)
@@ -881,20 +887,20 @@ def ask_ai_opinion(data):
         fundamental_analysis.append(f"**Rentabilité:** {profitability_desc}.")
         
         # Évaluation valorisation
-        if pe != 999 and pe < 15:
+        if pe != 999 and isinstance(pe, (int, float)) and pe < 15:
             valuation = "SOUS-ÉVALUÉE"
             valuation_desc = f"Valorisation attractive (PER: {pe:.1f})"
-        elif pe != 999 and pe < 25:
+        elif pe != 999 and isinstance(pe, (int, float)) and pe < 25:
             valuation = "RAISONNABLE"
             valuation_desc = f"Valorisation raisonnable (PER: {pe:.1f})"
-        elif pe != 999 and pe < 40:
+        elif pe != 999 and isinstance(pe, (int, float)) and pe < 40:
             valuation = "ÉLEVÉE"
             valuation_desc = f"Valorisation élevée (PER: {pe:.1f})"
         else:
             valuation = "NON DISPONIBLE"
             valuation_desc = "Valorisation non disponible"
         
-        if peg != 999:
+        if peg != 999 and isinstance(peg, (int, float)):
             if peg < 1:
                 valuation_desc += f", PEG excellent ({peg:.2f})"
             elif peg < 1.5:
@@ -973,7 +979,7 @@ def ask_ai_opinion(data):
         if roe >= 15: score += 2
         elif roe >= 10: score += 1
         if profit_margin >= 10: score += 1
-        if pe != 999 and pe < 25: score += 1
+        if pe != 999 and isinstance(pe, (int, float)) and pe < 25: score += 1
         if isinstance(rsi, (int, float)) and 30 < rsi < 70: score += 1
         if "HAUSSIER" in str(trend).upper(): score += 1
         
