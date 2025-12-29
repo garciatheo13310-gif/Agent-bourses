@@ -712,19 +712,19 @@ with tab_analyse:
                 </p>
             </div>
         """, unsafe_allow_html=True)
-    else:
-        st.warning(f"⚠️ Aucune action n'est actuellement dans sa zone d'achat intéressante sur les {len(all_results)} analysées.")
-        st.info("💡 Vous pouvez voir toutes les actions analysées en désactivant le filtre ci-dessous.")
-        # Option pour voir toutes les actions
-        show_all = st.checkbox("Afficher toutes les actions analysées", value=False)
-        if show_all:
-            results = all_results
         else:
-            st.stop()
-    
-    # Métriques principales avec style moderne
-    st.markdown("<br>", unsafe_allow_html=True)
-    col1, col2, col3, col4 = st.columns(4)
+            st.warning(f"⚠️ Aucune action n'est actuellement dans sa zone d'achat intéressante sur les {len(all_results)} analysées.")
+            st.info("💡 Vous pouvez voir toutes les actions analysées en désactivant le filtre ci-dessous.")
+            # Option pour voir toutes les actions
+            show_all = st.checkbox("Afficher toutes les actions analysées", value=False)
+            if show_all:
+                results = all_results
+            else:
+                st.stop()
+        
+        # Métriques principales avec style moderne
+        st.markdown("<br>", unsafe_allow_html=True)
+        col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         avg_score = sum(s.get('score', 0) for s in results) / len(results) if results else 0
@@ -782,20 +782,20 @@ with tab_analyse:
             </div>
         """, unsafe_allow_html=True)
     
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("---")
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("---")
     
     # Tableau principal avec style
-    st.markdown("""
+        st.markdown("""
         <div style='padding: 1.5rem 0;'>
             <h2 style='font-size: 1.75rem; font-weight: 700; color: #1e293b; margin-bottom: 1rem;'>
                 📋 Détails des actions
             </h2>
         </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     # Préparation des données pour le tableau
-    table_data = []
+        table_data = []
     for idx, stock in enumerate(results, 1):
         current_price = stock.get('current_price_eur', 'N/A')
         buy_low = stock.get('buy_zone_low_eur', 'N/A')
@@ -819,14 +819,14 @@ with tab_analyse:
             'Tendance': stock.get('short_trend', 'N/A')
         })
     
-    df = pd.DataFrame(table_data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+        df = pd.DataFrame(table_data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
     
     # Graphiques
-    st.markdown("---")
-    st.subheader("📈 Visualisations")
+        st.markdown("---")
+        st.subheader("📈 Visualisations")
     
-    col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
     
     with col1:
         # Graphique des scores
@@ -873,9 +873,9 @@ with tab_analyse:
         st.plotly_chart(fig_scatter, use_container_width=True)
     
     # Graphique des zones d'achat
-    st.subheader("💰 Zones d'achat potentielles (en EUR)")
+        st.subheader("💰 Zones d'achat potentielles (en EUR)")
     
-    buy_zones_data = []
+        buy_zones_data = []
     for stock in results:
         if stock.get('buy_zone_low_eur') and stock.get('buy_zone_high_eur'):
             buy_zones_data.append({
@@ -916,13 +916,13 @@ with tab_analyse:
         st.plotly_chart(fig_zones, use_container_width=True)
     
     # Détails par action
-    st.markdown("---")
-    st.subheader("🔍 Analyse détaillée par action")
+        st.markdown("---")
+        st.subheader("🔍 Analyse détaillée par action")
     
-    selected_stock = st.selectbox(
+        selected_stock = st.selectbox(
         "Sélectionner une action pour voir les détails",
         [f"{s.get('symbol', '')} - {s.get('name', '')}" for s in results]
-    )
+        )
     
     if selected_stock:
         stock_idx = [f"{s.get('symbol', '')} - {s.get('name', '')}" for s in results].index(selected_stock)
