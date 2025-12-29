@@ -573,25 +573,25 @@ with tab_analyse:
             st.stop()
         
         # Scoring et classement
-            status_text.text(f"🏆 Classement et sélection des TOP {TOP_N}...")
-            progress_bar.progress(60)
-            top_stocks = score_and_rank_stocks(opportunities)
+        status_text.text(f"🏆 Classement et sélection des TOP {TOP_N}...")
+        progress_bar.progress(60)
+        top_stocks = score_and_rank_stocks(opportunities)
         
         # Analyse technique avec progression
-            status_text.text(f"📊 Analyse technique de {len(top_stocks)} actions...")
-            progress_bar.progress(65)
-            stocks_with_tech = []
+        status_text.text(f"📊 Analyse technique de {len(top_stocks)} actions...")
+        progress_bar.progress(65)
+        stocks_with_tech = []
         for i, stock in enumerate(top_stocks, 1):
             progress_bar.progress(65 + int((i / len(top_stocks)) * 15))
             status_text.text(f"📊 Analyse technique {i}/{len(top_stocks)}: {stock.get('symbol', 'N/A')}...")
             full_data = get_technical_data(stock)
-        if full_data:
-                    stocks_with_tech.append(full_data)
+            if full_data:
+                stocks_with_tech.append(full_data)
         
         # Analyse IA avec progression
-                    status_text.text(f"🧠 Analyse IA avec Mistral pour {len(stocks_with_tech)} actions...")
-                    progress_bar.progress(85)
-                    final_results = []
+        status_text.text(f"🧠 Analyse IA avec Mistral pour {len(stocks_with_tech)} actions...")
+        progress_bar.progress(85)
+        final_results = []
         for i, stock in enumerate(stocks_with_tech, 1):
             progress_bar.progress(85 + int((i / len(stocks_with_tech)) * 10))
             status_text.text(f"🧠 Analyse IA {i}/{len(stocks_with_tech)}: {stock.get('symbol', 'N/A')}...")
@@ -600,15 +600,15 @@ with tab_analyse:
             final_results.append(stock)
         
         # Génération du rapport email
-            status_text.text("📧 Génération du rapport email...")
-            progress_bar.progress(98)
+        status_text.text("📧 Génération du rapport email...")
+        progress_bar.progress(98)
         
         # Créer le rapport pour l'email (format similaire à main.py)
-            report = f"\n{'='*70}\n"
-            report += f"📊 RAPPORT BOURSE MONDIALE - ANALYSE APPROFONDIE\n"
-            report += f"🏆 TOP {len(final_results)} MEILLEURES ACTIONS\n"
-            report += f"📅 Date: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
-            report += f"{'='*70}\n\n"
+        report = f"\n{'='*70}\n"
+        report += f"📊 RAPPORT BOURSE MONDIALE - ANALYSE APPROFONDIE\n"
+        report += f"🏆 TOP {len(final_results)} MEILLEURES ACTIONS\n"
+        report += f"📅 Date: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+        report += f"{'='*70}\n\n"
         
         for idx, stock in enumerate(final_results, 1):
             avis = stock.get('avis_ia', 'N/A')
@@ -624,7 +624,7 @@ with tab_analyse:
             report += block
         
         # Envoi email à l'utilisateur connecté
-            status_text.text("📧 Envoi du rapport par email...")
+        status_text.text("📧 Envoi du rapport par email...")
         try:
             # Récupérer l'email de l'utilisateur connecté
             from database import get_user_email
