@@ -725,9 +725,9 @@ with tab_analyse:
         # Métriques principales avec style moderne
         st.markdown("<br>", unsafe_allow_html=True)
         col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        avg_score = sum(s.get('score', 0) for s in results) / len(results) if results else 0
+        
+        with col1:
+            avg_score = sum(s.get('score', 0) for s in results) / len(results) if results else 0
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                         padding: 1.5rem; 
@@ -740,8 +740,8 @@ with tab_analyse:
             </div>
         """, unsafe_allow_html=True)
     
-    with col2:
-        avg_revenue_growth = sum(s.get('revenue_growth', 0) for s in results) / len(results) if results else 0
+        with col2:
+            avg_revenue_growth = sum(s.get('revenue_growth', 0) for s in results) / len(results) if results else 0
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
                         padding: 1.5rem; 
@@ -754,8 +754,8 @@ with tab_analyse:
             </div>
         """, unsafe_allow_html=True)
     
-    with col3:
-        avg_roe = sum(s.get('roe', 0) for s in results) / len(results) if results else 0
+        with col3:
+            avg_roe = sum(s.get('roe', 0) for s in results) / len(results) if results else 0
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
                         padding: 1.5rem; 
@@ -767,9 +767,9 @@ with tab_analyse:
                 <h2 style='margin: 0; font-size: 2.5rem; font-weight: 700;'>{avg_roe:.1f}<span style='font-size: 1.5rem;'>%</span></h2>
             </div>
         """, unsafe_allow_html=True)
-    
-    with col4:
-        in_zone_count = sum(1 for s in results if is_in_buy_zone(s))
+        
+        with col4:
+            in_zone_count = sum(1 for s in results if is_in_buy_zone(s))
         st.markdown(f"""
             <div style='background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); 
                         padding: 1.5rem; 
@@ -785,7 +785,7 @@ with tab_analyse:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("---")
     
-    # Tableau principal avec style
+        # Tableau principal avec style
         st.markdown("""
         <div style='padding: 1.5rem 0;'>
             <h2 style='font-size: 1.75rem; font-weight: 700; color: #1e293b; margin-bottom: 1rem;'>
@@ -794,10 +794,10 @@ with tab_analyse:
         </div>
         """, unsafe_allow_html=True)
     
-    # Préparation des données pour le tableau
+        # Préparation des données pour le tableau
         table_data = []
-    for idx, stock in enumerate(results, 1):
-        current_price = stock.get('current_price_eur', 'N/A')
+        for idx, stock in enumerate(results, 1):
+            current_price = stock.get('current_price_eur', 'N/A')
         buy_low = stock.get('buy_zone_low_eur', 'N/A')
         buy_high = stock.get('buy_zone_high_eur', 'N/A')
         
@@ -822,15 +822,15 @@ with tab_analyse:
         df = pd.DataFrame(table_data)
         st.dataframe(df, use_container_width=True, hide_index=True)
     
-    # Graphiques
+        # Graphiques
         st.markdown("---")
         st.subheader("📈 Visualisations")
     
         col1, col2 = st.columns(2)
     
-    with col1:
-        # Graphique des scores
-        fig_scores = go.Figure(data=[
+        with col1:
+            # Graphique des scores
+            fig_scores = go.Figure(data=[
             go.Bar(
                 x=[s.get('symbol', '') for s in results],
                 y=[s.get('score', 0) for s in results],
@@ -847,9 +847,9 @@ with tab_analyse:
         )
         st.plotly_chart(fig_scores, use_container_width=True)
     
-    with col2:
-        # Graphique croissance vs ROE
-        fig_scatter = go.Figure(data=[
+        with col2:
+            # Graphique croissance vs ROE
+            fig_scatter = go.Figure(data=[
             go.Scatter(
                 x=[s.get('revenue_growth', 0) for s in results],
                 y=[s.get('roe', 0) for s in results],
@@ -872,21 +872,21 @@ with tab_analyse:
         )
         st.plotly_chart(fig_scatter, use_container_width=True)
     
-    # Graphique des zones d'achat
+        # Graphique des zones d'achat
         st.subheader("💰 Zones d'achat potentielles (en EUR)")
     
         buy_zones_data = []
-    for stock in results:
-        if stock.get('buy_zone_low_eur') and stock.get('buy_zone_high_eur'):
-            buy_zones_data.append({
+        for stock in results:
+            if stock.get('buy_zone_low_eur') and stock.get('buy_zone_high_eur'):
+                buy_zones_data.append({
                 'Action': stock.get('symbol', ''),
                 'Prix actuel': stock.get('current_price_eur', 0),
                 'Zone basse': stock.get('buy_zone_low_eur', 0),
                 'Zone haute': stock.get('buy_zone_high_eur', 0)
             })
     
-    if buy_zones_data:
-        fig_zones = go.Figure()
+        if buy_zones_data:
+            fig_zones = go.Figure()
         
         for zone in buy_zones_data:
             fig_zones.add_trace(go.Scatter(
@@ -915,7 +915,7 @@ with tab_analyse:
         )
         st.plotly_chart(fig_zones, use_container_width=True)
     
-    # Détails par action
+        # Détails par action
         st.markdown("---")
         st.subheader("🔍 Analyse détaillée par action")
     
@@ -924,8 +924,8 @@ with tab_analyse:
         [f"{s.get('symbol', '')} - {s.get('name', '')}" for s in results]
         )
     
-    if selected_stock:
-        stock_idx = [f"{s.get('symbol', '')} - {s.get('name', '')}" for s in results].index(selected_stock)
+        if selected_stock:
+            stock_idx = [f"{s.get('symbol', '')} - {s.get('name', '')}" for s in results].index(selected_stock)
         stock = results[stock_idx]
         
         col1, col2 = st.columns(2)
@@ -979,7 +979,7 @@ with tab1:
     col1, col2 = st.columns(2)
     
     with col1:
-        capital_initial = st.number_input(
+            capital_initial = st.number_input(
             "💰 Capital initial (€)",
             min_value=0.0,
             max_value=10000000.0,
@@ -989,7 +989,7 @@ with tab1:
             key="calc_capital_initial"
         )
         
-        versement_periodique = st.number_input(
+    versement_periodique = st.number_input(
             "💵 Versement périodique (€)",
             min_value=0.0,
             max_value=100000.0,
@@ -999,22 +999,22 @@ with tab1:
             key="calc_versement"
         )
         
-        frequence_versement = st.selectbox(
+    frequence_versement = st.selectbox(
             "📅 Fréquence des versements",
             ["Aucun", "Mensuel", "Trimestriel", "Semestriel", "Annuel"],
             index=0,
             help="Fréquence à laquelle vous ajoutez de l'argent",
             key="calc_freq"
-        )
+    )
         
-        duree_investissement = st.slider(
+    duree_investissement = st.slider(
             "⏱️ Durée d'investissement (années)",
             min_value=1,
             max_value=50,
             value=10,
             step=1,
             key="calc_duree"
-        )
+    )
     
     with col2:
         st.markdown("#### 📊 Scénarios de Rendement")
@@ -1037,9 +1037,9 @@ with tab1:
             step=0.5,
             help="Taux d'intérêt annuel dans le scénario moyen",
             key="calc_taux_real"
-        )
+    )
         
-        taux_pessimiste = st.slider(
+    taux_pessimiste = st.slider(
             "📉 Scénario Pessimiste (%)",
             min_value=-10.0,
             max_value=15.0,
@@ -1047,9 +1047,9 @@ with tab1:
             step=0.5,
             help="Taux d'intérêt annuel dans le scénario défavorable",
             key="calc_taux_pess"
-        )
+    )
         
-        taux_conservateur = st.slider(
+    taux_conservateur = st.slider(
             "🛡️ Scénario Conservateur (%)",
             min_value=0.0,
             max_value=10.0,
@@ -1057,7 +1057,7 @@ with tab1:
             step=0.1,
             help="Taux d'intérêt annuel pour un placement sécurisé (livret A, etc.)",
             key="calc_taux_cons"
-        )
+    )
     
     # Fonction de calcul avec versements périodiques
     def calculer_interets_composes(capital_init, versement, frequence, taux_annuel, annees):
@@ -1096,16 +1096,16 @@ with tab1:
     
     # Calculs pour tous les scénarios
     capital_final_opt, evolution_opt = calculer_interets_composes(
-        capital_initial, versement_periodique, frequence_versement, taux_optimiste, duree_investissement
+    capital_initial, versement_periodique, frequence_versement, taux_optimiste, duree_investissement
     )
     capital_final_real, evolution_real = calculer_interets_composes(
-        capital_initial, versement_periodique, frequence_versement, taux_realiste, duree_investissement
+    capital_initial, versement_periodique, frequence_versement, taux_realiste, duree_investissement
     )
     capital_final_pess, evolution_pess = calculer_interets_composes(
-        capital_initial, versement_periodique, frequence_versement, taux_pessimiste, duree_investissement
+    capital_initial, versement_periodique, frequence_versement, taux_pessimiste, duree_investissement
     )
     capital_final_cons, evolution_cons = calculer_interets_composes(
-        capital_initial, versement_periodique, frequence_versement, taux_conservateur, duree_investissement
+    capital_initial, versement_periodique, frequence_versement, taux_conservateur, duree_investissement
     )
     
     # Calcul des totaux investis
@@ -1126,7 +1126,7 @@ with tab1:
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric(
+            st.metric(
             "🚀 Optimiste",
             f"{capital_final_opt:,.0f} €",
             delta=f"+{gain_opt:,.0f} € ({taux_optimiste}%/an)",
@@ -1135,8 +1135,8 @@ with tab1:
         st.caption(f"Total investi: {total_investi:,.0f} €")
         st.caption(f"Multiplicateur: {capital_final_opt/total_investi:.2f}x")
     
-    with col2:
-        st.metric(
+        with col2:
+            st.metric(
             "📈 Réaliste",
             f"{capital_final_real:,.0f} €",
             delta=f"+{gain_real:,.0f} € ({taux_realiste}%/an)",
@@ -1145,8 +1145,8 @@ with tab1:
         st.caption(f"Total investi: {total_investi:,.0f} €")
         st.caption(f"Multiplicateur: {capital_final_real/total_investi:.2f}x")
     
-    with col3:
-        st.metric(
+        with col3:
+            st.metric(
             "📉 Pessimiste",
             f"{capital_final_pess:,.0f} €",
             delta=f"{gain_pess:+,.0f} € ({taux_pessimiste}%/an)",
@@ -1155,8 +1155,8 @@ with tab1:
         st.caption(f"Total investi: {total_investi:,.0f} €")
         st.caption(f"Multiplicateur: {capital_final_pess/total_investi:.2f}x")
     
-    with col4:
-        st.metric(
+        with col4:
+            st.metric(
             "🛡️ Conservateur",
             f"{capital_final_cons:,.0f} €",
             delta=f"+{gain_cons:,.0f} € ({taux_conservateur}%/an)",
@@ -1176,56 +1176,56 @@ with tab1:
         x=annees_liste,
         y=evolution_opt,
         mode='lines+markers',
-        name=f'🚀 Optimiste ({taux_optimiste}%/an)',
-        line=dict(color='#10b981', width=3),
-        marker=dict(size=6)
+    name=f'🚀 Optimiste ({taux_optimiste}%/an)',
+    line=dict(color='#10b981', width=3),
+    marker=dict(size=6)
     ))
     fig_evolution.add_trace(go.Scatter(
-        x=annees_liste,
-        y=evolution_real,
-        mode='lines+markers',
-        name=f'📈 Réaliste ({taux_realiste}%/an)',
-        line=dict(color='#3b82f6', width=3),
-        marker=dict(size=6)
+    x=annees_liste,
+    y=evolution_real,
+    mode='lines+markers',
+    name=f'📈 Réaliste ({taux_realiste}%/an)',
+    line=dict(color='#3b82f6', width=3),
+    marker=dict(size=6)
     ))
     fig_evolution.add_trace(go.Scatter(
-        x=annees_liste,
-        y=evolution_pess,
-        mode='lines+markers',
-        name=f'📉 Pessimiste ({taux_pessimiste}%/an)',
-        line=dict(color='#ef4444', width=3),
-        marker=dict(size=6)
+    x=annees_liste,
+    y=evolution_pess,
+    mode='lines+markers',
+    name=f'📉 Pessimiste ({taux_pessimiste}%/an)',
+    line=dict(color='#ef4444', width=3),
+    marker=dict(size=6)
     ))
     fig_evolution.add_trace(go.Scatter(
-        x=annees_liste,
-        y=evolution_cons,
-        mode='lines+markers',
-        name=f'🛡️ Conservateur ({taux_conservateur}%/an)',
-        line=dict(color='#6b7280', width=2, dash='dash'),
-        marker=dict(size=5)
+    x=annees_liste,
+    y=evolution_cons,
+    mode='lines+markers',
+    name=f'🛡️ Conservateur ({taux_conservateur}%/an)',
+    line=dict(color='#6b7280', width=2, dash='dash'),
+    marker=dict(size=5)
     ))
     
     # Ligne du total investi
     total_investi_par_annee = [capital_initial]
     for annee in range(1, duree_investissement + 1):
-        total_investi_par_annee.append(capital_initial + (versement_periodique * freq_map.get(frequence_versement, 0) * annee))
+    total_investi_par_annee.append(capital_initial + (versement_periodique * freq_map.get(frequence_versement, 0) * annee))
     
     fig_evolution.add_trace(go.Scatter(
-        x=annees_liste,
-        y=total_investi_par_annee,
-        mode='lines',
-        name='💰 Total Investi',
-        line=dict(color='#9ca3af', width=2, dash='dot'),
-        opacity=0.7
+    x=annees_liste,
+    y=total_investi_par_annee,
+    mode='lines',
+    name='💰 Total Investi',
+    line=dict(color='#9ca3af', width=2, dash='dot'),
+    opacity=0.7
     ))
     
     fig_evolution.update_layout(
-        title=f"💹 Évolution du Capital sur {duree_investissement} ans",
-        xaxis_title="Années",
-        yaxis_title="Capital (€)",
-        height=500,
-        hovermode='x unified',
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
+    title=f"💹 Évolution du Capital sur {duree_investissement} ans",
+    xaxis_title="Années",
+    yaxis_title="Capital (€)",
+    height=500,
+    hovermode='x unified',
+    legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
     )
     
     st.plotly_chart(fig_evolution, use_container_width=True)
@@ -1235,33 +1235,33 @@ with tab1:
     st.markdown("### 📋 Tableau Récapitulatif Détaillé")
     
     tableau_data = {
-        'Scénario': ['🚀 Optimiste', '📈 Réaliste', '📉 Pessimiste', '🛡️ Conservateur'],
-        'Taux annuel (%)': [f"{taux_optimiste:.2f}", f"{taux_realiste:.2f}", f"{taux_pessimiste:.2f}", f"{taux_conservateur:.2f}"],
-        'Capital final (€)': [
+    'Scénario': ['🚀 Optimiste', '📈 Réaliste', '📉 Pessimiste', '🛡️ Conservateur'],
+    'Taux annuel (%)': [f"{taux_optimiste:.2f}", f"{taux_realiste:.2f}", f"{taux_pessimiste:.2f}", f"{taux_conservateur:.2f}"],
+    'Capital final (€)': [
             f"{capital_final_opt:,.2f}",
             f"{capital_final_real:,.2f}",
             f"{capital_final_pess:,.2f}",
             f"{capital_final_cons:,.2f}"
-        ],
-        'Total investi (€)': [f"{total_investi:,.2f}"] * 4,
-        'Gain/Perte (€)': [
+    ],
+    'Total investi (€)': [f"{total_investi:,.2f}"] * 4,
+    'Gain/Perte (€)': [
             f"{gain_opt:+,.2f}",
             f"{gain_real:+,.2f}",
             f"{gain_pess:+,.2f}",
             f"{gain_cons:+,.2f}"
-        ],
-        'Rendement total (%)': [
+    ],
+    'Rendement total (%)': [
             f"{((capital_final_opt/total_investi - 1)*100):.2f}",
             f"{((capital_final_real/total_investi - 1)*100):.2f}",
             f"{((capital_final_pess/total_investi - 1)*100):.2f}",
             f"{((capital_final_cons/total_investi - 1)*100):.2f}"
-        ],
-        'Multiplicateur': [
+    ],
+    'Multiplicateur': [
             f"{capital_final_opt/total_investi:.2f}x",
             f"{capital_final_real/total_investi:.2f}x",
             f"{capital_final_pess/total_investi:.2f}x",
             f"{capital_final_cons/total_investi:.2f}x"
-        ]
+    ]
     }
     
     df_recap = pd.DataFrame(tableau_data)
@@ -1470,24 +1470,24 @@ with tab3:
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        date_transaction = st.date_input("📅 Date", value=datetime.now().date())
+            date_transaction = st.date_input("📅 Date", value=datetime.now().date())
     
-    with col2:
-        symbol_transaction = st.text_input("🏷️ Ticker", placeholder="AAPL ou CW8 (ETF)", value="")
+        with col2:
+            symbol_transaction = st.text_input("🏷️ Ticker", placeholder="AAPL ou CW8 (ETF)", value="")
     
-    with col3:
-        type_transaction = st.selectbox("Type", ["Achat", "Vente"])
+        with col3:
+            type_transaction = st.selectbox("Type", ["Achat", "Vente"])
     
-    with col4:
-        prix_transaction = st.number_input("💰 Prix (€)", min_value=0.01, value=100.0, step=0.01)
+        with col4:
+            prix_transaction = st.number_input("💰 Prix (€)", min_value=0.01, value=100.0, step=0.01)
     
     col1, col2 = st.columns(2)
     
     with col1:
-        quantite_transaction = st.number_input("📊 Quantité", min_value=1, value=10, step=1)
+            quantite_transaction = st.number_input("📊 Quantité", min_value=1, value=10, step=1)
     
-    with col2:
-        if st.button("💾 Enregistrer la Transaction", type="primary"):
+        with col2:
+            if st.button("💾 Enregistrer la Transaction", type="primary"):
             # Ici on pourrait sauvegarder dans un fichier JSON ou base de données
             st.success(f"✅ Transaction enregistrée: {type_transaction} {quantite_transaction} {symbol_transaction} à {prix_transaction}€")
     
@@ -1501,7 +1501,7 @@ with tab3:
     col1, col2 = st.columns(2)
     
     with col1:
-        periode_simulation = st.selectbox(
+            periode_simulation = st.selectbox(
             "📅 Période",
             ["1 mois", "3 mois", "6 mois", "1 an", "3 ans", "5 ans"],
             index=3
@@ -1515,8 +1515,8 @@ with tab3:
             step=1.0
         )
     
-    with col2:
-        volatilite = st.slider(
+        with col2:
+            volatilite = st.slider(
             "📊 Volatilité (%)",
             min_value=10.0,
             max_value=50.0,
@@ -1589,18 +1589,18 @@ with tab3:
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("📊 Rendement Total", f"{rendement_total:.1f}%")
+            st.metric("📊 Rendement Total", f"{rendement_total:.1f}%")
     
-    with col2:
-        st.metric("📈 Rendement Annualisé", f"{rendement_annuelise:.1f}%")
+        with col2:
+            st.metric("📈 Rendement Annualisé", f"{rendement_annuelise:.1f}%")
     
-    with col3:
-        valeur_max = max(valeurs)
+        with col3:
+            valeur_max = max(valeurs)
         drawdown = (valeur_max - valeur_finale) / valeur_max * 100
         st.metric("📉 Drawdown Max", f"-{drawdown:.1f}%")
     
-    with col4:
-        st.metric("🎯 Surperformance vs S&P 500", f"+{rendement_annuelise - 10:.1f}%")
+        with col4:
+            st.metric("🎯 Surperformance vs S&P 500", f"+{rendement_annuelise - 10:.1f}%")
     
     # Note importante
     st.warning("""
@@ -2041,10 +2041,10 @@ with tab4:
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
-        compte_type = st.selectbox("Type de compte", ["PEA", "CTO", "Crypto Kraken"], key="new_compte")
+            compte_type = st.selectbox("Type de compte", ["PEA", "CTO", "Crypto Kraken"], key="new_compte")
     
-    with col2:
-        if compte_type == "Crypto Kraken":
+        with col2:
+            if compte_type == "Crypto Kraken":
             # Menu déroulant pour les cryptos
             crypto_options = {
                 'BTC': 'Bitcoin',
@@ -2106,8 +2106,8 @@ with tab4:
                 else:
                     symbol_input = search_query.upper() if search_query else ''
     
-    with col3:
-        if compte_type == "Crypto Kraken":
+        with col3:
+            if compte_type == "Crypto Kraken":
             # Pour les cryptos, permettre les valeurs décimales (ex: 0.012 BTC)
             quantite_input = st.number_input("Quantité", min_value=0.0, value=0.0, step=0.0001, format="%.4f", key="new_quantite_crypto", 
                                             help="Quantité de crypto (ex: 0.012 pour 0.012 BTC)")
@@ -2115,8 +2115,8 @@ with tab4:
             # Pour les actions, quantité entière
             quantite_input = st.number_input("Quantité", min_value=1, value=1, step=1, key="new_quantite")
     
-    with col4:
-        if compte_type == "Crypto Kraken":
+        with col4:
+            if compte_type == "Crypto Kraken":
             # Pour les cryptos, toujours en EUR
             devise_achat = "EUR"
             prix_achat_input = st.number_input(
@@ -2205,8 +2205,8 @@ with tab4:
                 if devise_achat == "USD":
                     st.caption("ℹ️ Commission XTB de 0.5% sur le taux de change USD/EUR appliquée automatiquement")
     
-    with col5:
-        date_achat_input = st.date_input("Date d'achat", value=datetime.now().date(), key="new_date")
+        with col5:
+            date_achat_input = st.date_input("Date d'achat", value=datetime.now().date(), key="new_date")
     
     if st.button("➕ Ajouter la Position", type="primary"):
         if symbol_input:
@@ -2299,11 +2299,11 @@ with tab4:
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        nom_compte = st.text_input("Nom du compte", placeholder="Ex: Compte Courant BNP, Livret A", key="nom_compte_bancaire")
+            nom_compte = st.text_input("Nom du compte", placeholder="Ex: Compte Courant BNP, Livret A", key="nom_compte_bancaire")
     with col2:
-        type_compte = st.selectbox("Type de compte", ["Compte Courant", "Livret A", "Livret LDDS", "PEL", "Autre"], key="type_compte_bancaire")
-    with col3:
-        solde_compte = st.number_input("Solde actuel (€)", min_value=0.0, value=0.0, step=0.01, key="solde_compte_bancaire")
+            type_compte = st.selectbox("Type de compte", ["Compte Courant", "Livret A", "Livret LDDS", "PEL", "Autre"], key="type_compte_bancaire")
+        with col3:
+            solde_compte = st.number_input("Solde actuel (€)", min_value=0.0, value=0.0, step=0.01, key="solde_compte_bancaire")
     
     if st.button("➕ Ajouter le Compte Bancaire", key="add_compte_bancaire"):
         if nom_compte:
