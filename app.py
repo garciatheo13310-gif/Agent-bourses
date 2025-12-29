@@ -498,13 +498,25 @@ st.sidebar.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Bouton de lancement - Style épuré
+# Créer des onglets AVANT l'analyse pour qu'ils restent visibles
+tab_analyse, tab1, tab2, tab3, tab4 = st.tabs([
+    "🔍 Analyse Approfondie", 
+    "💹 Calculateur d'Intérêts Composés", 
+    "🎯 Simulateur de Portefeuille", 
+    "📈 Suivi Performance", 
+    "💼 Mon Portefeuille Réel"
+])
+
+# Bouton de lancement - Style épuré (reste dans la sidebar, accessible depuis tous les onglets)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
-if st.sidebar.button("🚀 Lancer l'analyse", type="primary", use_container_width=True):
-    # Zone de statut avec barre de progression
-    status_container = st.container()
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+
+# TAB ANALYSE APPROFONDIE
+with tab_analyse:
+    if st.sidebar.button("🚀 Lancer l'analyse", type="primary", use_container_width=True):
+        # Zone de statut avec barre de progression
+        status_container = st.container()
+        progress_bar = st.progress(0)
+        status_text = st.empty()
     
     with status_container:
         st.info("🔄 **Analyse en cours...** Ne fermez pas cette page. L'analyse peut prendre plusieurs minutes.")
@@ -947,15 +959,12 @@ if 'results' in st.session_state and st.session_state['results']:
         st.markdown("#### 🤖 Analyse IA")
         st.info(stock.get('avis_ia', 'Analyse non disponible'))
 
-else:
-    st.info("👆 Utilisez le menu de gauche pour lancer une analyse. Les résultats s'afficheront ici.")
+    else:
+        st.info("👆 Utilisez le menu de gauche pour lancer une analyse. Les résultats s'afficheront ici.")
 
 # ============================================
 # NOUVELLES FONCTIONNALITÉS : RENDEMENTS & SIMULATION
 # ============================================
-
-st.markdown("---")
-st.markdown("## 💰 Outils de Performance & Simulation")
 
 # Créer des onglets pour organiser les nouvelles fonctionnalités
 tab1, tab2, tab3, tab4 = st.tabs(["💹 Calculateur d'Intérêts Composés", "🎯 Simulateur de Portefeuille", "📈 Suivi Performance", "💼 Mon Portefeuille Réel"])
