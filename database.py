@@ -547,39 +547,123 @@ def save_user_portfolio(user_id: int, portfolio: Dict) -> bool:
         # Détecter le type de DB réellement utilisé
         is_pg = is_using_postgresql(conn)
         
+        # Préparer les données JSON
+        pea_data = json.dumps(portfolio.get('pea', []))
+        compte_titre_data = json.dumps(portfolio.get('compte_titre', []))
+        crypto_data = json.dumps(portfolio.get('crypto_kraken', []))
+        comptes_bancaires_data = json.dumps(portfolio.get('comptes_bancaires', []))
+        
+        # Vérifier si le portefeuille existe déjà
         if is_pg:
-            cursor.execute('''
-                UPDATE portfolios
-                SET pea = %s, compte_titre = %s, crypto_kraken = %s, comptes_bancaires = %s,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = %s
-            ''', (
-                json.dumps(portfolio.get('pea', [])),
-                json.dumps(portfolio.get('compte_titre', [])),
-                json.dumps(portfolio.get('crypto_kraken', [])),
-                json.dumps(portfolio.get('comptes_bancaires', [])),
-                user_id
-            ))
+            cursor.execute('SELECT id FROM portfolios WHERE user_id = %s', (user_id,))
         else:
-            cursor.execute('''
-                UPDATE portfolios
-                SET pea = ?, compte_titre = ?, crypto_kraken = ?, comptes_bancaires = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = ?
-            ''', (
-                json.dumps(portfolio.get('pea', [])),
-                json.dumps(portfolio.get('compte_titre', [])),
-                json.dumps(portfolio.get('crypto_kraken', [])),
-                json.dumps(portfolio.get('comptes_bancaires', [])),
-                user_id
-            ))
+            cursor.execute('SELECT id FROM portfolios WHERE user_id = ?', (user_id,))
+        
+        portfolio_exists = cursor.fetchone()
+        
+        if portfolio_exists:
+            # Mise à jour
+            if is_pg:
+                cursor.execute('''
+                    UPDATE portfolios
+                    SET pea = %s, compte_titre = %s, crypto_kraken = %s, comptes_bancaires = %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = %s
+                ''', (
+                    pea_data,
+                    compte_titre_data,
+                    crypto_data,
+                    comptes_bancaires_data,
+                    user_id
+                ))
+            else:
+                cursor.execute('''
+                    UPDATE portfolios
+                    SET pea = ?, compte_titre = ?, crypto_kraken = ?, comptes_bancaires = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                ''', (
+                    pea_data,
+                    compte_titre_data,
+                    crypto_data,
+                    comptes_bancaires_data,
+                    user_id
+                ))
+        else:
+            # Création
+            if is_pg:
+                cursor.execute('''
+                    INSERT INTO portfolios (user_id, pea, compte_titre, crypto_kraken, comptes_bancaires)
+                    VALUES (%s, %s, %s, %s, %s)
+                ''', (
+                    user_id,
+                    pea_data,
+                    compte_titre_data,
+                    crypto_data,
+                    comptes_bancaires_data
+                ))
+            else:
+                cursor.execute('''
+                    INSERT INTO portfolios (user_id, pea, compte_titre, crypto_kraken, comptes_bancaires)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (
+                    user_id,
+                    pea_data,
+                    compte_titre_data,
+                    crypto_data,
+                    comptes_bancaires_data
+                ))
         
         conn.commit()
         conn.close()
         return True
     except Exception as e:
-        print(f"Erreur sauvegarde portefeuille: {e}")
+        print(f"❌ Erreur sauvegarde portefeuille: {e}")
+        import traceback
+        traceback.print_exc()
         return False
+
+def get_database_info() -> Dict[str, str]:
+    """Retourne des informations sur la base de données utilisée"""
+    info = {
+        'type': 'Inconnu',
+        'status': 'Non connecté',
+        'host': 'N/A',
+        'database': 'N/A'
+    }
+    
+    try:
+        conn = get_connection()
+        is_pg = is_using_postgresql(conn)
+        
+        if is_pg:
+            info['type'] = 'PostgreSQL (Supabase)'
+            info['status'] = '✅ Connecté'
+            
+            # Essayer de récupérer des infos de connexion
+            try:
+                if hasattr(conn, 'get_dsn_parameters'):
+                    dsn = conn.get_dsn_parameters()
+                    info['host'] = dsn.get('host', 'N/A')
+                    info['database'] = dsn.get('dbname', 'N/A')
+                elif DATABASE_URL:
+                    parsed = urlparse(DATABASE_URL)
+                    info['host'] = parsed.hostname or 'N/A'
+                    info['database'] = parsed.path.lstrip('/') or 'N/A'
+            except:
+                pass
+            
+            conn.close()
+        else:
+            info['type'] = 'SQLite (Local)'
+            info['status'] = '⚠️ Mode local (non persistant sur Streamlit Cloud)'
+            info['host'] = 'Fichier local'
+            info['database'] = 'agent_bourse.db'
+            conn.close()
+    except Exception as e:
+        info['status'] = f'❌ Erreur: {str(e)[:50]}'
+    
+    return info
 
 def save_analysis(user_id: int, analysis_data: List[Dict], scan_date: str) -> bool:
     """Sauvegarde une analyse pour un utilisateur"""

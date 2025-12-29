@@ -1025,23 +1025,20 @@ def ask_ai_opinion(data):
         
         # Tenter la connexion à Ollama avec timeout
         try:
-            response = ollama.chat(
-                model='mistral', 
-                messages=[{'role': 'user', 'content': prompt}],
-                options={'timeout': 30}  # Timeout de 30 secondes
-            )
+            # Désactiver temporairement les messages d'erreur de la bibliothèque ollama
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                response = ollama.chat(
+                    model='mistral', 
+                    messages=[{'role': 'user', 'content': prompt}],
+                    options={'timeout': 30}  # Timeout de 30 secondes
+                )
             return response['message']['content'].strip()
-        except (ConnectionError, TimeoutError, OSError) as e:
-            # Erreur de connexion - utiliser le fallback
+        except (ConnectionError, TimeoutError, OSError, Exception) as e:
+            # Toute erreur de connexion - utiliser le fallback silencieusement
+            # Ne pas afficher l'erreur, utiliser directement le fallback
             return get_fallback_analysis()
-        except Exception as e:
-            # Autre erreur Ollama - utiliser le fallback
-            error_msg = str(e).lower()
-            if 'connection' in error_msg or 'connect' in error_msg or 'refused' in error_msg:
-                return get_fallback_analysis()
-            else:
-                # Erreur inattendue - retourner le fallback avec un message
-                return get_fallback_analysis()
     except Exception as e:
         # Erreur générale - utiliser le fallback
         return get_fallback_analysis()

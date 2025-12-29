@@ -352,6 +352,17 @@ st.markdown("""
 col1, col2 = st.columns([6, 1])
 with col1:
     st.markdown(f"👤 **Connecté en tant que:** {st.session_state.get('username', 'Utilisateur')}")
+    
+    # Afficher le type de base de données utilisée
+    try:
+        from database import get_database_info
+        db_info = get_database_info()
+        if db_info['type'] == 'PostgreSQL (Supabase)':
+            st.markdown(f"💾 **Base de données:** 🟢 {db_info['type']} - {db_info['status']}")
+        else:
+            st.markdown(f"💾 **Base de données:** 🟡 {db_info['type']} - {db_info['status']}")
+    except:
+        pass
 with col2:
     if st.button("🚪 Déconnexion", use_container_width=True):
         logout()
@@ -2289,8 +2300,15 @@ with tab4:
             if 'comptes_bancaires' not in st.session_state['portfolio']:
                 st.session_state['portfolio']['comptes_bancaires'] = []
             st.session_state['portfolio']['comptes_bancaires'].append(nouveau_compte)
-            if save_portfolio(st.session_state['portfolio']):
-                st.success(f"✅ Compte {nom_compte} ajouté et sauvegardé")
+            
+            # Sauvegarder explicitement
+            try:
+                if save_portfolio(st.session_state['portfolio']):
+                    st.success(f"✅ Compte {nom_compte} ajouté et sauvegardé avec succès")
+                else:
+                    st.error(f"❌ Erreur lors de la sauvegarde du compte {nom_compte}")
+            except Exception as e:
+                st.error(f"❌ Erreur lors de la sauvegarde: {str(e)}")
             st.rerun()
         else:
             st.error("⚠️ Veuillez entrer un nom de compte")
