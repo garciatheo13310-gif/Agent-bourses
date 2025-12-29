@@ -348,7 +348,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Afficher le nom d'utilisateur et bouton de déconnexion
+    # Afficher le nom d'utilisateur et bouton de déconnexion
 col1, col2 = st.columns([6, 1])
 with col1:
     st.markdown(f"👤 **Connecté en tant que:** {st.session_state.get('username', 'Utilisateur')}")
@@ -357,15 +357,22 @@ with col1:
     try:
         from database import get_database_info
         db_info = get_database_info()
-        if db_info['type'] == 'PostgreSQL (Supabase)':
+        if db_info['type'] == 'Supabase (API)':
             st.markdown(f"💾 **Base de données:** 🟢 {db_info['type']} - {db_info['status']}")
         else:
             st.markdown(f"💾 **Base de données:** 🟡 {db_info['type']} - {db_info['status']}")
-    except:
-        pass
-with col2:
-    if st.button("🚪 Déconnexion", use_container_width=True):
-        logout()
+            if db_info.get('error'):
+                with st.expander("ℹ️ Comment activer Supabase"):
+                    st.write(f"**Problème:** {db_info['error']}")
+                    st.write("**Solution:**")
+                    st.write("1. Allez sur Streamlit Cloud → Manage app → Secrets")
+                    st.write("2. Ajoutez ces deux clés:")
+                    st.code('''SUPABASE_URL = "https://zypgufpilsuunsiclykw.supabase.co"
+SUPABASE_KEY = "sb_publishable_tuyj9qXdFw5SnVVUMKAGdw_1mDDyf27"''', language="toml")
+                    st.write("3. Vérifiez que `supabase>=2.0.0` est dans `requirements.txt`")
+                    st.write("4. Redéployez l'application")
+    except Exception as e:
+        st.markdown(f"💾 **Base de données:** ⚠️ Erreur de détection")
 
 # Sidebar - Paramètres avec style épuré
 st.sidebar.markdown("""
