@@ -2305,6 +2305,7 @@ with tab4:
     perf_pea = {'total_investi': 0.0, 'total_actuel': 0.0, 'gain_perte_total': 0.0, 'rendement_total_pct': 0.0, 'positions': []}
     perf_ct = {'total_investi': 0.0, 'total_actuel': 0.0, 'gain_perte_total': 0.0, 'rendement_total_pct': 0.0, 'positions': []}
     perf_crypto = {'total_investi': 0.0, 'total_actuel': 0.0, 'gain_perte_total': 0.0, 'rendement_total_pct': 0.0, 'positions': []}
+    all_positions = []  # Initialiser all_positions dès le début pour éviter NameError
     
     # Affichage et suivi du portefeuille
     if st.session_state['portfolio']['pea'] or st.session_state['portfolio']['compte_titre'] or st.session_state['portfolio'].get('crypto_kraken', []):
@@ -2762,20 +2763,20 @@ with tab4:
                         st.dataframe(df_crypto, use_container_width=True, hide_index=True)
         
         # Tableau consolidé
-                        st.markdown("### 📋 Vue Consolidée de Toutes les Positions")
-                        all_positions = []
+        st.markdown("### 📋 Vue Consolidée de Toutes les Positions")
+        all_positions = []
         if perf_pea['positions']:
             for p in perf_pea['positions']:
-                    p['compte'] = 'PEA'
-                    all_positions.append(p)
+                p['compte'] = 'PEA'
+                all_positions.append(p)
         if perf_ct['positions']:
             for p in perf_ct['positions']:
-                    p['compte'] = 'CTO'
-                    all_positions.append(p)
+                p['compte'] = 'CTO'
+                all_positions.append(p)
         if perf_crypto['positions']:
             for p in perf_crypto['positions']:
-                    p['compte'] = 'Crypto Kraken'
-                    all_positions.append(p)
+                p['compte'] = 'Crypto Kraken'
+                all_positions.append(p)
         
         if all_positions:
             df_all = pd.DataFrame(all_positions)
