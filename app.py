@@ -1605,52 +1605,87 @@ with tab4:
     # Fonction pour récupérer le prix en temps réel
     def get_real_time_price(symbol):
         """Récupère le prix actuel d'une action/ETF en temps réel"""
-        try:
-            ticker = yf.Ticker(symbol)
-            
-            # Essayer d'abord avec info (plus rapide)
+        # Liste des variantes de ticker à essayer (pour les ETFs européens notamment)
+        ticker_variants = [symbol]
+        
+        # Si le ticker n'a pas de suffixe, essayer d'ajouter .PA (Euronext Paris)
+        if '.' not in symbol and len(symbol) <= 6:
+            ticker_variants.append(f"{symbol}.PA")
+            ticker_variants.append(f"{symbol}.AS")  # Amsterdam
+            ticker_variants.append(f"{symbol}.DE")  # Allemagne
+            ticker_variants.append(f"{symbol}.L")   # Londres
+        
+        for ticker_symbol in ticker_variants:
             try:
-                info = ticker.info
-                if info and len(info) > 5:  # Vérifier que info n'est pas vide
-                    current_price = (info.get('currentPrice') or 
-                               info.get('regularMarketPrice') or 
-                               info.get('previousClose') or
-                               info.get('ask') or
-                               info.get('bid'))
-                    
-                    if current_price and current_price > 0:
-                        currency = info.get('currency', 'USD')
-                        return current_price, currency
-            except:
-                pass
-            
-            # Si info ne fonctionne pas, utiliser l'historique récent
-            try:
-                hist = ticker.history(period="1d", interval="1m")
-                if not hist.empty:
-                    current_price = hist['Close'].iloc[-1]
-                    if current_price and current_price > 0:
-                        # Pour les actions européennes, le prix est déjà en EUR
-                        # Pour les actions US, on devra convertir
-                        currency = 'USD'  # Par défaut, on assume USD
-                        return current_price, currency
-            except:
-                pass
-            
-            # Dernier recours : historique 5 jours
-            try:
-                hist = ticker.history(period="5d")
-                if not hist.empty:
-                    current_price = hist['Close'].iloc[-1]
-                    if current_price and current_price > 0:
-                        currency = 'USD'
-                        return current_price, currency
-            except:
-                pass
-            
-            return None, None
-        except Exception as e:
-            return None, None
+                ticker = yf.Ticker(ticker_symbol)
+                
+                # Essayer d'abord avec info (plus rapide)
+                try:
+                    info = ticker.info
+                    if info and len(info) > 5:  # Vérifier que info n'est pas vide
+                        current_price = (info.get('currentPrice') or 
+                                   info.get('regularMarketPrice') or 
+                                   info.get('previousClose') or
+                                   info.get('regularMarketPreviousClose') or
+                                   info.get('ask') or
+                                   info.get('bid') or
+                                   info.get('navPrice'))  # Pour les ETFs
+                        
+                        if current_price and current_price > 0:
+                            currency = info.get('currency', 'USD')
+                            # Si pas de currency dans info, essayer de la déduire du ticker
+                            if not currency or currency == 'USD':
+                                if '.PA' in ticker_symbol or '.AS' in ticker_symbol:
+                                    currency = 'EUR'
+                                elif '.DE' in ticker_symbol:
+                                    currency = 'EUR'
+                                elif '.L' in ticker_symbol:
+                                    currency = 'GBP'
+                            return current_price, currency
+                except Exception as e:
+                    pass
+                
+                # Si info ne fonctionne pas, utiliser l'historique récent
+                try:
+                    hist = ticker.history(period="1d", interval="1m")
+                    if not hist.empty and len(hist) > 0:
+                        current_price = hist['Close'].iloc[-1]
+                        if current_price and current_price > 0 and not pd.isna(current_price):
+                            # Déterminer la devise selon le suffixe
+                            if '.PA' in ticker_symbol or '.AS' in ticker_symbol:
+                                currency = 'EUR'
+                            elif '.DE' in ticker_symbol:
+                                currency = 'EUR'
+                            elif '.L' in ticker_symbol:
+                                currency = 'GBP'
+                            else:
+                                currency = 'USD'
+                            return current_price, currency
+                except Exception as e:
+                    pass
+                
+                # Dernier recours : historique 5 jours
+                try:
+                    hist = ticker.history(period="5d")
+                    if not hist.empty and len(hist) > 0:
+                        current_price = hist['Close'].iloc[-1]
+                        if current_price and current_price > 0 and not pd.isna(current_price):
+                            # Déterminer la devise selon le suffixe
+                            if '.PA' in ticker_symbol or '.AS' in ticker_symbol:
+                                currency = 'EUR'
+                            elif '.DE' in ticker_symbol:
+                                currency = 'EUR'
+                            elif '.L' in ticker_symbol:
+                                currency = 'GBP'
+                            else:
+                                currency = 'USD'
+                            return current_price, currency
+                except Exception as e:
+                    pass
+            except Exception as e:
+                continue
+        
+        return None, None
     
     # Fonction pour récupérer le prix d'une crypto en EUR
     def get_crypto_price(symbol):
@@ -1738,15 +1773,34 @@ with tab4:
     
     # Fonction pour rechercher et obtenir le nom de l'entreprise
     def get_company_name(ticker_symbol):
-        """Récupère le nom de l'entreprise depuis le ticker"""
-        try:
-            ticker = yf.Ticker(ticker_symbol)
-            info = ticker.info
-            if info and len(info) > 5:
-                name = info.get('longName') or info.get('shortName') or info.get('name', ticker_symbol)
-                return name
-        except:
-            pass
+        """Récupère le nom de l'entreprise/ETF depuis le ticker"""
+        # Liste des variantes de ticker à essayer (pour les ETFs européens notamment)
+        ticker_variants = [ticker_symbol]
+        
+        # Si le ticker n'a pas de suffixe, essayer d'ajouter .PA (Euronext Paris)
+        if '.' not in ticker_symbol and len(ticker_symbol) <= 6:
+            ticker_variants.append(f"{ticker_symbol}.PA")
+            ticker_variants.append(f"{ticker_symbol}.AS")  # Amsterdam
+            ticker_variants.append(f"{ticker_symbol}.DE")  # Allemagne
+            ticker_variants.append(f"{ticker_symbol}.L")   # Londres
+        
+        for ticker_var in ticker_variants:
+            try:
+                ticker = yf.Ticker(ticker_var)
+                info = ticker.info
+                if info and len(info) > 5:
+                    # Pour les ETFs, essayer différents champs
+                    name = (info.get('longName') or 
+                           info.get('shortName') or 
+                           info.get('name') or
+                           info.get('legalType') or  # Pour certains ETFs
+                           info.get('fundName'))     # Pour les fonds
+                    
+                    if name and name != ticker_symbol:
+                        return name
+            except Exception as e:
+                continue
+        
         return None
     
     # Fonction pour convertir ISIN en ticker
