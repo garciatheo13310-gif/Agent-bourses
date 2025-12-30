@@ -1830,7 +1830,8 @@ with tab4:
         # Base de données de correspondance ISIN -> Ticker pour les actions françaises populaires
         isin_to_ticker_map = {
             # Actions françaises populaires
-            'FR0000120073': 'TTE.PA',  # TotalEnergies
+            'FR0000120073': 'AI.PA',   # Air Liquide (corrigé)
+            'FR0000120271': 'TTE.PA',  # TotalEnergies
             'FR0000121013': 'MC.PA',   # LVMH
             'FR0000120324': 'OR.PA',   # L'Oréal
             'FR0000120071': 'AIR.PA',  # Airbus
@@ -2006,19 +2007,15 @@ with tab4:
                 # Vérifier le format ISIN: 2 lettres + 10 chiffres
                 if search_query[:2].isalpha() and search_query[2:].isdigit():
                     is_isin = True
-                    if compte_type == "CTO":
-                        # Essayer de convertir l'ISIN en ticker
-                        with st.spinner("🔍 Recherche du ticker (base locale puis Moning.co)..."):
-                            ticker_from_isin = search_ticker_by_isin(search_query.upper())
-                        if ticker_from_isin:
-                            st.success(f"✅ ISIN {search_query.upper()} → Ticker: {ticker_from_isin}")
-                            symbol_input = ticker_from_isin
-                        else:
-                            st.warning(f"⚠️ ISIN {search_query.upper()} non trouvé. Entrez le ticker manuellement ou vérifiez l'ISIN.")
-                            symbol_input = search_query.upper()  # Utiliser l'ISIN tel quel si non trouvé
+                    # Essayer de convertir l'ISIN en ticker (pour PEA et CTO)
+                    with st.spinner("🔍 Recherche du ticker (base locale puis Moning.co)..."):
+                        ticker_from_isin = search_ticker_by_isin(search_query.upper())
+                    if ticker_from_isin:
+                        st.success(f"✅ ISIN {search_query.upper()} → Ticker: {ticker_from_isin}")
+                        symbol_input = ticker_from_isin
                     else:
-                        st.info("ℹ️ Les ISIN sont uniquement supportés pour le CTO. Utilisez un ticker pour le PEA.")
-                        symbol_input = search_query.upper()
+                        st.warning(f"⚠️ ISIN {search_query.upper()} non trouvé. Entrez le ticker manuellement ou vérifiez l'ISIN.")
+                        symbol_input = search_query.upper()  # Utiliser l'ISIN tel quel si non trouvé
             
             if not is_isin:
                 # Afficher les suggestions si l'utilisateur tape quelque chose
