@@ -1328,66 +1328,67 @@ with tab2:
                 gain_cible = montant_investi * (prise_profit_pourcentage / 100)
                 
                 portfolio_data.append({
-                'Action': stock['symbol'],
-                'Allocation (%)': stock['allocation'],
-                'Montant (€)': montant_investi,
-                'Nb Titres': round(nb_titres, 2),
-                'Prix Achat (€)': stock['prix_achat'],
-                'Stop-Loss (€)': round(prix_stop_loss, 2),
-                'Prise Profit (€)': round(prix_prise_profit, 2),
-                'Perte Max (€)': round(perte_max, 2),
-                'Gain Cible (€)': round(gain_cible, 2)
+                    'Action': stock['symbol'],
+                    'Allocation (%)': stock['allocation'],
+                    'Montant (€)': montant_investi,
+                    'Nb Titres': round(nb_titres, 2),
+                    'Prix Achat (€)': stock['prix_achat'],
+                    'Stop-Loss (€)': round(prix_stop_loss, 2),
+                    'Prise Profit (€)': round(prix_prise_profit, 2),
+                    'Perte Max (€)': round(perte_max, 2),
+                    'Gain Cible (€)': round(gain_cible, 2)
                 })
-                
-                df_portfolio = pd.DataFrame(portfolio_data)
-                
-                st.markdown("### 📊 Composition du Portefeuille")
-                st.dataframe(df_portfolio, use_container_width=True, hide_index=True)
-                
-                # Résumé du risque
-                st.markdown("### ⚠️ Analyse du Risque")
-                col1, col2, col3, col4 = st.columns(4)
-                
-                perte_totale_max = sum(p['Perte Max (€)'] for p in portfolio_data)
-                gain_total_cible = sum(p['Gain Cible (€)'] for p in portfolio_data)
-                capital_restant = capital_total * (1 - total_allocation / 100)
-                
-                with col1:
-                    st.metric("💰 Capital investi", f"{capital_total * (total_allocation/100):,.0f} €")
-                
-                with col2:
-                    st.metric("💵 Capital disponible", f"{capital_restant:,.0f} €")
-                
-                with col3:
-                    st.metric("🛑 Perte maximale totale", f"-{perte_totale_max:,.0f} €", delta=f"-{stop_loss_pourcentage}%")
-                
-                with col4:
-                    st.metric("🎯 Gain cible total", f"+{gain_total_cible:,.0f} €", delta=f"+{prise_profit_pourcentage}%")
-                
-                # Graphique de répartition
-                fig_pie = go.Figure(data=[go.Pie(
-                    labels=[s['symbol'] for s in selected_stocks],
-                    values=[s['allocation'] for s in selected_stocks],
-                    hole=0.3
-                )])
-                fig_pie.update_layout(
-                    title="Répartition du Portefeuille",
-                    height=400
-                )
-                # Clé unique avec identifiant d'onglet et hash des symboles pour éviter les doublons
-                symbols_hash = hash(tuple(sorted([s['symbol'] for s in selected_stocks])))
-                st.plotly_chart(fig_pie, use_container_width=True, key=f"fig_pie_portfolio_tab2_{abs(symbols_hash)}")
-                
-                # Recommandations
-                st.markdown("### 💡 Recommandations de Gestion")
-                st.info(f"""
-                **Stratégie recommandée:**
-                1. **Diversification:** {len(selected_stocks)} actions sélectionnées (idéal: 15-20)
-                2. **Stop-Loss:** Vendez automatiquement si une action baisse de {stop_loss_pourcentage}%
-                3. **Prise de Profit:** Vendez 50% de vos positions à +{prise_profit_pourcentage}%, gardez le reste pour plus de hausse
-                4. **Rééquilibrage:** Revoyez votre portefeuille tous les 3 mois
-                5. **Liquidité:** Gardez {capital_restant:,.0f} € en réserve pour les opportunités
-                """)
+            
+            # Affichage APRÈS la boucle (une seule fois)
+            df_portfolio = pd.DataFrame(portfolio_data)
+            
+            st.markdown("### 📊 Composition du Portefeuille")
+            st.dataframe(df_portfolio, use_container_width=True, hide_index=True)
+            
+            # Résumé du risque
+            st.markdown("### ⚠️ Analyse du Risque")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            perte_totale_max = sum(p['Perte Max (€)'] for p in portfolio_data)
+            gain_total_cible = sum(p['Gain Cible (€)'] for p in portfolio_data)
+            capital_restant = capital_total * (1 - total_allocation / 100)
+            
+            with col1:
+                st.metric("💰 Capital investi", f"{capital_total * (total_allocation/100):,.0f} €")
+            
+            with col2:
+                st.metric("💵 Capital disponible", f"{capital_restant:,.0f} €")
+            
+            with col3:
+                st.metric("🛑 Perte maximale totale", f"-{perte_totale_max:,.0f} €", delta=f"-{stop_loss_pourcentage}%")
+            
+            with col4:
+                st.metric("🎯 Gain cible total", f"+{gain_total_cible:,.0f} €", delta=f"+{prise_profit_pourcentage}%")
+            
+            # Graphique de répartition
+            fig_pie = go.Figure(data=[go.Pie(
+                labels=[s['symbol'] for s in selected_stocks],
+                values=[s['allocation'] for s in selected_stocks],
+                hole=0.3
+            )])
+            fig_pie.update_layout(
+                title="Répartition du Portefeuille",
+                height=400
+            )
+            # Clé unique avec identifiant d'onglet et hash des symboles pour éviter les doublons
+            symbols_hash = hash(tuple(sorted([s['symbol'] for s in selected_stocks])))
+            st.plotly_chart(fig_pie, use_container_width=True, key=f"fig_pie_portfolio_tab2_{abs(symbols_hash)}")
+            
+            # Recommandations
+            st.markdown("### 💡 Recommandations de Gestion")
+            st.info(f"""
+            **Stratégie recommandée:**
+            1. **Diversification:** {len(selected_stocks)} actions sélectionnées (idéal: 15-20)
+            2. **Stop-Loss:** Vendez automatiquement si une action baisse de {stop_loss_pourcentage}%
+            3. **Prise de Profit:** Vendez 50% de vos positions à +{prise_profit_pourcentage}%, gardez le reste pour plus de hausse
+            4. **Rééquilibrage:** Revoyez votre portefeuille tous les 3 mois
+            5. **Liquidité:** Gardez {capital_restant:,.0f} € en réserve pour les opportunités
+            """)
         else:
             st.warning("⚠️ Lancez d'abord une analyse pour utiliser le simulateur de portefeuille.")
 
