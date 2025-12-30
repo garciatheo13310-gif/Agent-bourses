@@ -2539,27 +2539,26 @@ with tab4:
             
             with col2:
                 # Répartition globale (investissements + comptes bancaires)
-                if patrimoine_total > 0:
-                        labels_patrimoine = []
-                        values_patrimoine = []
+                labels_patrimoine = []
+                values_patrimoine = []
                 if total_actuel_global > 0:
-                            labels_patrimoine.extend(['PEA', 'CTO', 'Crypto Kraken'])
-                            values_patrimoine.extend([perf_pea['total_actuel'], perf_ct['total_actuel'], perf_crypto['total_actuel']])
+                    labels_patrimoine.extend(['PEA', 'CTO', 'Crypto Kraken'])
+                    values_patrimoine.extend([perf_pea['total_actuel'], perf_ct['total_actuel'], perf_crypto['total_actuel']])
                 if total_comptes_bancaires > 0:
-                            labels_patrimoine.append('Comptes Bancaires')
-                            values_patrimoine.append(total_comptes_bancaires)
-                    
+                    labels_patrimoine.append('Comptes Bancaires')
+                    values_patrimoine.append(total_comptes_bancaires)
+                
                 if labels_patrimoine:
-                            fig_patrimoine = go.Figure(data=[go.Pie(
-                            labels=labels_patrimoine,
-                            values=values_patrimoine,
-                            hole=0.3
-                            )])
-                            fig_patrimoine.update_layout(
-                            title="Répartition du Patrimoine Global",
-                            height=400
-                            )
-                            st.plotly_chart(fig_patrimoine, use_container_width=True, key="fig_patrimoine_total")
+                    fig_patrimoine = go.Figure(data=[go.Pie(
+                        labels=labels_patrimoine,
+                        values=values_patrimoine,
+                        hole=0.3
+                    )])
+                    fig_patrimoine.update_layout(
+                        title="Répartition du Patrimoine Global",
+                        height=400
+                    )
+                    st.plotly_chart(fig_patrimoine, use_container_width=True, key="fig_patrimoine_total")
             
             with col2:
                 # Performance par compte
