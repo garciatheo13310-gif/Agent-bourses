@@ -2559,21 +2559,25 @@ with tab4:
                         height=400
                     )
                     st.plotly_chart(fig_patrimoine, use_container_width=True, key="fig_patrimoine_total")
+        
+        # Graphique de performance par compte
+        if total_investi_global > 0:
+            col1, col2 = st.columns(2)
             
-            with col2:
+            with col1:
                 # Performance par compte
-                    fig_perf = go.Figure()
-                    fig_perf.add_trace(go.Bar(
+                fig_perf = go.Figure()
+                fig_perf.add_trace(go.Bar(
                     x=['PEA', 'CTO', 'Crypto Kraken', 'Total'],
                     y=[perf_pea['rendement_total_pct'], perf_ct['rendement_total_pct'], perf_crypto['rendement_total_pct'], rendement_global_pct],
                     marker_color=['green' if p >= 0 else 'red' for p in [perf_pea['rendement_total_pct'], perf_ct['rendement_total_pct'], rendement_global_pct]]
-                    ))
-                    fig_perf.update_layout(
+                ))
+                fig_perf.update_layout(
                     title="Rendement par Compte (%)",
                     yaxis_title="Rendement (%)",
                     height=400
-                    )
-                    st.plotly_chart(fig_perf, use_container_width=True, key="fig_performance_par_compte")
+                )
+                st.plotly_chart(fig_perf, use_container_width=True, key="fig_performance_par_compte")
         
         # Détails par compte
         st.markdown("---")
