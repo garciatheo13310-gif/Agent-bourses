@@ -2344,8 +2344,14 @@ with tab4:
                     gain_perte = valeur_actuelle - investi
                     rendement_pct = (gain_perte / investi) * 100 if investi > 0 else 0
                     
+                    # Récupérer le nom de l'entreprise si pas déjà présent
+                    company_name = pos.get('name')
+                    if not company_name or company_name == symbol:
+                        company_name = get_company_name(symbol) or symbol
+                    
                     positions_detail.append({
                         'symbol': symbol,
+                        'name': company_name,  # Nom de l'entreprise
                         'quantite': quantite,
                         'prix_achat': prix_achat,
                         'prix_actuel': round(prix_actuel_eur, 2),
@@ -2400,9 +2406,14 @@ with tab4:
                     gain_perte = valeur_actuelle - investi
                     rendement_pct = (gain_perte / investi) * 100 if investi > 0 else 0
                     
+                    # Récupérer le nom de l'entreprise si pas déjà présent
+                    company_name = pos.get('name')
+                    if not company_name or company_name == symbol:
+                        company_name = get_company_name(symbol) or symbol
+                    
                     positions_detail.append({
                         'symbol': symbol,
-                        'name': pos.get('name', symbol),  # Nom de l'entreprise
+                        'name': company_name,  # Nom de l'entreprise
                         'quantite': quantite,
                         'prix_achat': prix_achat,
                         'prix_actuel': round(prix_actuel_eur, 2),
@@ -2430,9 +2441,14 @@ with tab4:
                         gain_perte = 0
                         rendement_pct = 0
                     
+                    # Récupérer le nom de l'entreprise si pas déjà présent
+                    company_name = pos.get('name')
+                    if not company_name or company_name == symbol:
+                        company_name = get_company_name(symbol) or symbol
+                    
                     positions_detail.append({
                         'symbol': symbol,
-                        'name': pos.get('name', symbol),  # Nom de l'entreprise
+                        'name': company_name,  # Nom de l'entreprise
                         'quantite': quantite,
                         'prix_achat': prix_achat,
                         'prix_actuel': round(prix_actuel_utilise, 2),
@@ -2635,10 +2651,10 @@ with tab4:
                         df_pea['compte'] = 'PEA'
                 # Réorganiser les colonnes pour afficher le nom en premier
                 if 'name' in df_pea.columns:
-                        cols = ['symbol', 'name', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'compte']
+                        cols = ['name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'compte']
                         cols = [c for c in cols if c in df_pea.columns]
                         df_pea = df_pea[cols]
-                        df_pea.columns = ['Ticker', 'Nom', 'Quantité', 'Prix Achat (€)*', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat', 'Compte']
+                        df_pea.columns = ['Nom', 'Ticker', 'Quantité', 'Prix Achat (€)*', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat', 'Compte']
                         st.caption("* Prix d'achat inclut les frais XTB (si applicable)")
                         st.dataframe(df_pea, use_container_width=True, hide_index=True)
         
@@ -2695,10 +2711,10 @@ with tab4:
                 df_ct['compte'] = 'CTO'
                 # Réorganiser les colonnes pour afficher le nom en premier
                 if 'name' in df_ct.columns:
-                        cols = ['symbol', 'name', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'compte']
+                        cols = ['name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'compte']
                         cols = [c for c in cols if c in df_ct.columns]
                         df_ct = df_ct[cols]
-                        df_ct.columns = ['Ticker', 'Nom', 'Quantité', 'Prix Achat (€)*', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat', 'Compte']
+                        df_ct.columns = ['Nom', 'Ticker', 'Quantité', 'Prix Achat (€)*', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat', 'Compte']
                         st.caption("* Prix d'achat inclut les frais XTB (si applicable)")
                         st.dataframe(df_ct, use_container_width=True, hide_index=True)
         
@@ -2756,10 +2772,10 @@ with tab4:
                         df_crypto['compte'] = 'Crypto Kraken'
                 # Réorganiser les colonnes pour afficher le nom en premier
                 if 'name' in df_crypto.columns:
-                        cols = ['symbol', 'name', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'compte']
+                        cols = ['name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'compte']
                         cols = [c for c in cols if c in df_crypto.columns]
                         df_crypto = df_crypto[cols]
-                        df_crypto.columns = ['Ticker', 'Nom', 'Quantité', 'Prix de Revient (€)', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat', 'Compte']
+                        df_crypto.columns = ['Nom', 'Ticker', 'Quantité', 'Prix de Revient (€)', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat', 'Compte']
                         st.dataframe(df_crypto, use_container_width=True, hide_index=True)
         
         # Tableau consolidé
@@ -2782,7 +2798,7 @@ with tab4:
             df_all = pd.DataFrame(all_positions)
             # Réorganiser les colonnes - inclure le nom si disponible
             if 'name' in df_all.columns:
-                # Afficher le nom au lieu du ticker
+                # Afficher le nom en premier
                 cols = ['compte', 'name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 
                     'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat']
                 cols = [c for c in cols if c in df_all.columns]
