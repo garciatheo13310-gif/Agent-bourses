@@ -2025,9 +2025,16 @@ with tab4:
     if 'comptes_bancaires' not in st.session_state['portfolio']:
         st.session_state['portfolio']['comptes_bancaires'] = []
     
-    if st.session_state['portfolio']['pea'] or st.session_state['portfolio']['compte_titre'] or st.session_state['portfolio'].get('crypto_kraken', []):
-        nb_positions = len(st.session_state['portfolio']['pea']) + len(st.session_state['portfolio']['compte_titre']) + len(st.session_state['portfolio'].get('crypto_kraken', []))
-        st.success(f"💾 Portefeuille chargé : {nb_positions} position(s) sauvegardée(s)")
+    # DEBUG: Afficher le contenu du portefeuille
+    nb_pea = len(st.session_state['portfolio'].get('pea', []))
+    nb_ct = len(st.session_state['portfolio'].get('compte_titre', []))
+    nb_crypto = len(st.session_state['portfolio'].get('crypto_kraken', []))
+    nb_positions = nb_pea + nb_ct + nb_crypto
+    
+    if nb_positions > 0:
+        st.success(f"💾 Portefeuille chargé : {nb_positions} position(s) sauvegardée(s) (PEA: {nb_pea}, CTO: {nb_ct}, Crypto: {nb_crypto})")
+    else:
+        st.info("ℹ️ Aucune position dans le portefeuille. Ajoutez vos premières positions ci-dessus.")
         
         # Bouton pour mettre à jour les noms manquants
         col1, col2 = st.columns([3, 1])
@@ -2581,13 +2588,13 @@ with tab4:
                 st.rerun()
     
     # Calculer pour PEA
-    perf_pea = calculer_performance_portefeuille(st.session_state['portfolio']['pea'])
+    perf_pea = calculer_performance_portefeuille(pea_list)
     
     # Calculer pour CTO
-    perf_ct = calculer_performance_portefeuille(st.session_state['portfolio']['compte_titre'])
+    perf_ct = calculer_performance_portefeuille(ct_list)
     
     # Calculer pour Crypto Kraken
-    perf_crypto = calculer_performance_portefeuille(st.session_state['portfolio'].get('crypto_kraken', []), is_crypto=True)
+    perf_crypto = calculer_performance_portefeuille(crypto_list, is_crypto=True)
     
     # Calculer le total des comptes bancaires
     total_comptes_bancaires = sum(compte.get('solde', 0) for compte in st.session_state['portfolio'].get('comptes_bancaires', []))
@@ -2638,8 +2645,8 @@ with tab4:
     # Métriques supplémentaires
     col1, col2 = st.columns(2)
     with col1:
-        nb_positions = len(st.session_state['portfolio']['pea']) + len(st.session_state['portfolio']['compte_titre']) + len(st.session_state['portfolio'].get('crypto_kraken', []))
-        st.metric("📋 Nombre de Positions Boursières", f"{nb_positions}")
+        nb_positions_total = len(pea_list) + len(ct_list) + len(crypto_list)
+        st.metric("📋 Nombre de Positions Boursières", f"{nb_positions_total}")
     with col2:
         nb_comptes = len(st.session_state['portfolio'].get('comptes_bancaires', []))
         st.metric("🏦 Nombre de Comptes Bancaires", f"{nb_comptes}")
@@ -2708,7 +2715,7 @@ with tab4:
     st.markdown("---")
     
     # PEA
-    if st.session_state['portfolio']['pea']:
+    if pea_list:
         st.markdown("### 🏦 PEA (Plan d'Épargne en Actions)")
         
         col1, col2, col3, col4 = st.columns(4)
@@ -2767,7 +2774,7 @@ with tab4:
                 st.dataframe(df_pea, use_container_width=True, hide_index=True)
     
     # CTO
-    if st.session_state['portfolio']['compte_titre']:
+    if ct_list:
         st.markdown("### 💼 CTO")
         
         col1, col2, col3, col4 = st.columns(4)
@@ -2827,7 +2834,7 @@ with tab4:
                 st.dataframe(df_ct, use_container_width=True, hide_index=True)
     
     # Crypto Kraken
-    if st.session_state['portfolio'].get('crypto_kraken', []):
+    if crypto_list:
         st.markdown("### 🪙 Crypto Kraken")
         
         col1, col2, col3, col4 = st.columns(4)
@@ -2993,11 +3000,11 @@ with tab4:
     st.markdown("### 🗑️ Supprimer une Position")
     
     all_positions_for_delete = []
-    for pos in st.session_state['portfolio']['pea']:
+    for pos in pea_list:
         all_positions_for_delete.append(f"PEA - {pos['symbol']} ({pos['quantite']} titres)")
-    for pos in st.session_state['portfolio']['compte_titre']:
+    for pos in ct_list:
         all_positions_for_delete.append(f"CTO - {pos['symbol']} ({pos['quantite']} titres)")
-    for pos in st.session_state['portfolio'].get('crypto_kraken', []):
+    for pos in crypto_list:
         all_positions_for_delete.append(f"Crypto Kraken - {pos['symbol']} ({pos['quantite']} unités)")
     
     if all_positions_for_delete:
