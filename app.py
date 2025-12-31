@@ -1561,12 +1561,18 @@ with tab4:
             return save_portfolio_to_db(portfolio)
     
     # Le portefeuille est déjà chargé par require_auth()
-    if 'portfolio' not in st.session_state:
+    # S'assurer que le portefeuille est bien chargé et rechargé si nécessaire
+    if 'portfolio' not in st.session_state or st.session_state.get('portfolio_loaded') != st.session_state.get('user_id'):
+        from database import get_user_portfolio
+        if st.session_state.get('user_id'):
+            st.session_state['portfolio'] = get_user_portfolio(st.session_state['user_id'])
+            st.session_state['portfolio_loaded'] = st.session_state['user_id']
+        else:
             st.session_state['portfolio'] = {
-            'pea': [],
-            'compte_titre': [],
-            'crypto_kraken': [],
-            'comptes_bancaires': []
+                'pea': [],
+                'compte_titre': [],
+                'crypto_kraken': [],
+                'comptes_bancaires': []
             }
     
     # Migration automatique depuis portfolio.json si le portefeuille est vide
@@ -2009,8 +2015,18 @@ with tab4:
         return updated
     
     # Afficher un message si le portefeuille est chargé
-    if st.session_state['portfolio']['pea'] or st.session_state['portfolio']['compte_titre']:
-        nb_positions = len(st.session_state['portfolio']['pea']) + len(st.session_state['portfolio']['compte_titre'])
+    # S'assurer que toutes les clés existent
+    if 'pea' not in st.session_state['portfolio']:
+        st.session_state['portfolio']['pea'] = []
+    if 'compte_titre' not in st.session_state['portfolio']:
+        st.session_state['portfolio']['compte_titre'] = []
+    if 'crypto_kraken' not in st.session_state['portfolio']:
+        st.session_state['portfolio']['crypto_kraken'] = []
+    if 'comptes_bancaires' not in st.session_state['portfolio']:
+        st.session_state['portfolio']['comptes_bancaires'] = []
+    
+    if st.session_state['portfolio']['pea'] or st.session_state['portfolio']['compte_titre'] or st.session_state['portfolio'].get('crypto_kraken', []):
+        nb_positions = len(st.session_state['portfolio']['pea']) + len(st.session_state['portfolio']['compte_titre']) + len(st.session_state['portfolio'].get('crypto_kraken', []))
         st.success(f"💾 Portefeuille chargé : {nb_positions} position(s) sauvegardée(s)")
         
         # Bouton pour mettre à jour les noms manquants
@@ -2282,6 +2298,11 @@ with tab4:
             # Sauvegarder le portefeuille avec TOUTES les données
             if save_portfolio(st.session_state['portfolio']):
                 st.success(f"✅ Position {symbol_input} ({company_name}) ajoutée au {compte_type} et sauvegardée")
+                # Recharger le portefeuille depuis la base de données pour s'assurer de la synchronisation
+                from database import get_user_portfolio
+                if st.session_state.get('user_id'):
+                    st.session_state['portfolio'] = get_user_portfolio(st.session_state['user_id'])
+                    st.session_state['portfolio_loaded'] = st.session_state['user_id']
             else:
                 st.success(f"✅ Position {symbol_input} ({company_name}) ajoutée au {compte_type}")
             st.rerun()
@@ -2325,6 +2346,11 @@ with tab4:
             try:
                 if save_portfolio(st.session_state['portfolio']):
                     st.success(f"✅ Compte {nom_compte} ajouté et sauvegardé avec succès")
+                    # Recharger le portefeuille depuis la base de données pour s'assurer de la synchronisation
+                    from database import get_user_portfolio
+                    if st.session_state.get('user_id'):
+                        st.session_state['portfolio'] = get_user_portfolio(st.session_state['user_id'])
+                        st.session_state['portfolio_loaded'] = st.session_state['user_id']
                 else:
                     st.error(f"❌ Erreur lors de la sauvegarde du compte {nom_compte}")
             except Exception as e:
@@ -2380,6 +2406,16 @@ with tab4:
     all_positions = []  # Initialiser all_positions dès le début pour éviter NameError
     
     # Affichage et suivi du portefeuille
+    # S'assurer que toutes les clés existent avant de vérifier
+    if 'pea' not in st.session_state['portfolio']:
+        st.session_state['portfolio']['pea'] = []
+    if 'compte_titre' not in st.session_state['portfolio']:
+        st.session_state['portfolio']['compte_titre'] = []
+    if 'crypto_kraken' not in st.session_state['portfolio']:
+        st.session_state['portfolio']['crypto_kraken'] = []
+    if 'comptes_bancaires' not in st.session_state['portfolio']:
+        st.session_state['portfolio']['comptes_bancaires'] = []
+    
     if st.session_state['portfolio']['pea'] or st.session_state['portfolio']['compte_titre'] or st.session_state['portfolio'].get('crypto_kraken', []):
         # Bouton pour actualiser les prix
         col1, col2 = st.columns([1, 4])
