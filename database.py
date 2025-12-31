@@ -437,16 +437,28 @@ def get_user_portfolio(user_id: int) -> Dict:
     }
 
 def save_user_portfolio(user_id: int, portfolio: Dict) -> bool:
-    """Sauvegarde le portefeuille d'un utilisateur"""
+    """Sauvegarde le portefeuille d'un utilisateur (fusionne avec les données existantes)"""
     try:
+        # Récupérer le portefeuille existant pour fusionner
+        existing_portfolio = get_user_portfolio(user_id)
+        
+        # Fusionner intelligemment : utiliser les nouvelles données si présentes, sinon garder les existantes
+        # On vérifie si la clé existe dans le portfolio passé (même si la liste est vide)
+        merged_portfolio = {
+            'pea': portfolio.get('pea') if 'pea' in portfolio else existing_portfolio.get('pea', []),
+            'compte_titre': portfolio.get('compte_titre') if 'compte_titre' in portfolio else existing_portfolio.get('compte_titre', []),
+            'crypto_kraken': portfolio.get('crypto_kraken') if 'crypto_kraken' in portfolio else existing_portfolio.get('crypto_kraken', []),
+            'comptes_bancaires': portfolio.get('comptes_bancaires') if 'comptes_bancaires' in portfolio else existing_portfolio.get('comptes_bancaires', [])
+        }
+        
         if is_using_supabase():
             client = get_supabase_client()
             
             portfolio_data = {
-                'pea': json.dumps(portfolio.get('pea', [])),
-                'compte_titre': json.dumps(portfolio.get('compte_titre', [])),
-                'crypto_kraken': json.dumps(portfolio.get('crypto_kraken', [])),
-                'comptes_bancaires': json.dumps(portfolio.get('comptes_bancaires', [])),
+                'pea': json.dumps(merged_portfolio.get('pea', [])),
+                'compte_titre': json.dumps(merged_portfolio.get('compte_titre', [])),
+                'crypto_kraken': json.dumps(merged_portfolio.get('crypto_kraken', [])),
+                'comptes_bancaires': json.dumps(merged_portfolio.get('comptes_bancaires', [])),
                 'updated_at': datetime.now().isoformat()
             }
             
@@ -478,10 +490,10 @@ def save_user_portfolio(user_id: int, portfolio: Dict) -> bool:
                         updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ?
                 ''', (
-                    json.dumps(portfolio.get('pea', [])),
-                    json.dumps(portfolio.get('compte_titre', [])),
-                    json.dumps(portfolio.get('crypto_kraken', [])),
-                    json.dumps(portfolio.get('comptes_bancaires', [])),
+                    json.dumps(merged_portfolio.get('pea', [])),
+                    json.dumps(merged_portfolio.get('compte_titre', [])),
+                    json.dumps(merged_portfolio.get('crypto_kraken', [])),
+                    json.dumps(merged_portfolio.get('comptes_bancaires', [])),
                     user_id
                 ))
             else:
@@ -490,10 +502,10 @@ def save_user_portfolio(user_id: int, portfolio: Dict) -> bool:
                     VALUES (?, ?, ?, ?, ?)
                 ''', (
                     user_id,
-                    json.dumps(portfolio.get('pea', [])),
-                    json.dumps(portfolio.get('compte_titre', [])),
-                    json.dumps(portfolio.get('crypto_kraken', [])),
-                    json.dumps(portfolio.get('comptes_bancaires', []))
+                    json.dumps(merged_portfolio.get('pea', [])),
+                    json.dumps(merged_portfolio.get('compte_titre', [])),
+                    json.dumps(merged_portfolio.get('crypto_kraken', [])),
+                    json.dumps(merged_portfolio.get('comptes_bancaires', []))
                 ))
             
             conn.commit()
