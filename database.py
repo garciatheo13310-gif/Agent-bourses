@@ -437,18 +437,15 @@ def get_user_portfolio(user_id: int) -> Dict:
     }
 
 def save_user_portfolio(user_id: int, portfolio: Dict) -> bool:
-    """Sauvegarde le portefeuille d'un utilisateur (fusionne avec les données existantes)"""
+    """Sauvegarde le portefeuille d'un utilisateur"""
     try:
-        # Récupérer le portefeuille existant pour fusionner
-        existing_portfolio = get_user_portfolio(user_id)
-        
-        # Fusionner intelligemment : utiliser les nouvelles données si présentes, sinon garder les existantes
-        # On vérifie si la clé existe dans le portfolio passé (même si la liste est vide)
+        # S'assurer que toutes les clés sont présentes avec des valeurs par défaut
+        # Le portfolio passé devrait toujours contenir toutes les données du session_state
         merged_portfolio = {
-            'pea': portfolio.get('pea') if 'pea' in portfolio else existing_portfolio.get('pea', []),
-            'compte_titre': portfolio.get('compte_titre') if 'compte_titre' in portfolio else existing_portfolio.get('compte_titre', []),
-            'crypto_kraken': portfolio.get('crypto_kraken') if 'crypto_kraken' in portfolio else existing_portfolio.get('crypto_kraken', []),
-            'comptes_bancaires': portfolio.get('comptes_bancaires') if 'comptes_bancaires' in portfolio else existing_portfolio.get('comptes_bancaires', [])
+            'pea': portfolio.get('pea', []),
+            'compte_titre': portfolio.get('compte_titre', []),
+            'crypto_kraken': portfolio.get('crypto_kraken', []),
+            'comptes_bancaires': portfolio.get('comptes_bancaires', [])
         }
         
         if is_using_supabase():
