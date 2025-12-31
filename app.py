@@ -2404,16 +2404,40 @@ with tab4:
                 )
             with col4:
                 if st.button("💾", key=f"save_solde_{idx}", help="Sauvegarder"):
-                        st.session_state['portfolio']['comptes_bancaires'][idx]['solde'] = nouveau_solde
-                if save_portfolio(st.session_state['portfolio']):
+                    st.session_state['portfolio']['comptes_bancaires'][idx]['solde'] = nouveau_solde
+                    try:
+                        if save_portfolio(st.session_state['portfolio']):
                             st.success(f"✅ Solde mis à jour")
-                            st.rerun()
+                            # Recharger le portefeuille
+                            from database import get_user_portfolio
+                            if st.session_state.get('user_id'):
+                                reloaded = get_user_portfolio(st.session_state['user_id'])
+                                if reloaded:
+                                    st.session_state['portfolio'] = reloaded
+                                    st.session_state['portfolio_loaded'] = st.session_state['user_id']
+                        else:
+                            st.error(f"❌ Erreur lors de la sauvegarde du solde")
+                    except Exception as e:
+                        st.error(f"❌ Erreur: {str(e)}")
+                    st.rerun()
             with col5:
                 if st.button("🗑️", key=f"delete_compte_{idx}", help="Supprimer"):
-                        st.session_state['portfolio']['comptes_bancaires'].pop(idx)
-                if save_portfolio(st.session_state['portfolio']):
+                    st.session_state['portfolio']['comptes_bancaires'].pop(idx)
+                    try:
+                        if save_portfolio(st.session_state['portfolio']):
                             st.success(f"✅ Compte supprimé")
-                            st.rerun()
+                            # Recharger le portefeuille
+                            from database import get_user_portfolio
+                            if st.session_state.get('user_id'):
+                                reloaded = get_user_portfolio(st.session_state['user_id'])
+                                if reloaded:
+                                    st.session_state['portfolio'] = reloaded
+                                    st.session_state['portfolio_loaded'] = st.session_state['user_id']
+                        else:
+                            st.error(f"❌ Erreur lors de la suppression du compte")
+                    except Exception as e:
+                        st.error(f"❌ Erreur: {str(e)}")
+                    st.rerun()
     
     st.markdown("---")
     
