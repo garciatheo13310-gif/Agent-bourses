@@ -464,13 +464,21 @@ def save_user_portfolio(user_id: int, portfolio: Dict) -> bool:
             
             if existing.data:
                 # Mise à jour
-                client.table('portfolios').update(portfolio_data).eq('user_id', user_id).execute()
+                result = client.table('portfolios').update(portfolio_data).eq('user_id', user_id).execute()
+                if hasattr(result, 'data') and result.data:
+                    return True
+                else:
+                    print(f"❌ Erreur Supabase UPDATE: {result}")
+                    return False
             else:
                 # Création
                 portfolio_data['user_id'] = user_id
-                client.table('portfolios').insert(portfolio_data).execute()
-            
-            return True
+                result = client.table('portfolios').insert(portfolio_data).execute()
+                if hasattr(result, 'data') and result.data:
+                    return True
+                else:
+                    print(f"❌ Erreur Supabase INSERT: {result}")
+                    return False
         else:
             # Fallback SQLite
             conn = get_sqlite_connection()

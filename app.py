@@ -2303,15 +2303,25 @@ with tab4:
                 st.session_state['portfolio']['comptes_bancaires'] = []
             
             # Sauvegarder le portefeuille avec TOUTES les données
-            if save_portfolio(st.session_state['portfolio']):
-                st.success(f"✅ Position {symbol_input} ({company_name}) ajoutée au {compte_type} et sauvegardée")
-                # Recharger le portefeuille depuis la base de données pour s'assurer de la synchronisation
-                from database import get_user_portfolio
-                if st.session_state.get('user_id'):
-                    st.session_state['portfolio'] = get_user_portfolio(st.session_state['user_id'])
-                    st.session_state['portfolio_loaded'] = st.session_state['user_id']
-            else:
-                st.success(f"✅ Position {symbol_input} ({company_name}) ajoutée au {compte_type}")
+            try:
+                if save_portfolio(st.session_state['portfolio']):
+                    st.success(f"✅ Position {symbol_input} ({company_name}) ajoutée au {compte_type} et sauvegardée")
+                    # Recharger le portefeuille depuis la base de données pour s'assurer de la synchronisation
+                    from database import get_user_portfolio
+                    if st.session_state.get('user_id'):
+                        try:
+                            reloaded = get_user_portfolio(st.session_state['user_id'])
+                            if reloaded:
+                                st.session_state['portfolio'] = reloaded
+                                st.session_state['portfolio_loaded'] = st.session_state['user_id']
+                        except Exception as reload_error:
+                            st.warning(f"⚠️ Position ajoutée mais erreur lors du rechargement: {reload_error}")
+                else:
+                    st.error(f"❌ Erreur lors de la sauvegarde de la position {symbol_input}")
+            except Exception as save_error:
+                st.error(f"❌ Erreur lors de la sauvegarde: {str(save_error)}")
+                import traceback
+                st.code(traceback.format_exc())
             st.rerun()
         else:
             st.error("⚠️ Veuillez entrer un ticker")
@@ -2356,12 +2366,19 @@ with tab4:
                     # Recharger le portefeuille depuis la base de données pour s'assurer de la synchronisation
                     from database import get_user_portfolio
                     if st.session_state.get('user_id'):
-                        st.session_state['portfolio'] = get_user_portfolio(st.session_state['user_id'])
-                        st.session_state['portfolio_loaded'] = st.session_state['user_id']
+                        try:
+                            reloaded = get_user_portfolio(st.session_state['user_id'])
+                            if reloaded:
+                                st.session_state['portfolio'] = reloaded
+                                st.session_state['portfolio_loaded'] = st.session_state['user_id']
+                        except Exception as reload_error:
+                            st.warning(f"⚠️ Compte ajouté mais erreur lors du rechargement: {reload_error}")
                 else:
                     st.error(f"❌ Erreur lors de la sauvegarde du compte {nom_compte}")
             except Exception as e:
                 st.error(f"❌ Erreur lors de la sauvegarde: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
             st.rerun()
         else:
             st.error("⚠️ Veuillez entrer un nom de compte")
@@ -2583,7 +2600,7 @@ with tab4:
             }
     
     # Bouton pour actualiser les prix (seulement si positions existent)
-    if st.session_state['portfolio']['pea'] or st.session_state['portfolio']['compte_titre'] or st.session_state['portfolio'].get('crypto_kraken', []):
+    if pea_list or ct_list or crypto_list:
         col1, col2 = st.columns([1, 4])
         with col1:
             if st.button("🔄 Actualiser les Prix", type="primary"):
@@ -2610,6 +2627,16 @@ with tab4:
     patrimoine_total = total_actuel_global + total_comptes_bancaires
     gain_perte_global = total_actuel_global - total_investi_global
     rendement_global_pct = (gain_perte_global / total_investi_global * 100) if total_investi_global > 0 else 0
+    
+    # DEBUG: Afficher le contenu pour vérifier
+    with st.expander("🔍 Debug - Contenu du portefeuille", expanded=False):
+        st.write(f"PEA: {len(pea_list)} positions")
+        st.write(f"CTO: {len(ct_list)} positions")
+        st.write(f"Crypto: {len(crypto_list)} positions")
+        if pea_list:
+            st.write("Première position PEA:", pea_list[0] if pea_list else "Aucune")
+        if perf_pea['positions']:
+            st.write("Première position PEA calculée:", perf_pea['positions'][0] if perf_pea['positions'] else "Aucune")
     
     # Métriques globales (TOUJOURS afficher)
     st.markdown("### 📊 Vue d'Ensemble du Patrimoine Global")
