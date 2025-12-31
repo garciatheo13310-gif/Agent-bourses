@@ -2423,6 +2423,11 @@ with tab4:
     if 'comptes_bancaires' not in st.session_state['portfolio']:
         st.session_state['portfolio']['comptes_bancaires'] = []
     
+    # Définir les variables locales pour éviter les accès répétés
+    pea_list = st.session_state['portfolio'].get('pea', [])
+    ct_list = st.session_state['portfolio'].get('compte_titre', [])
+    crypto_list = st.session_state['portfolio'].get('crypto_kraken', [])
+    
     # Calculer les performances pour chaque compte (TOUJOURS définir la fonction)
     def calculer_performance_portefeuille(positions, is_crypto=False):
             """Calcule la performance d'un portefeuille"""
