@@ -7,6 +7,7 @@ import sys
 import os
 import numpy as np
 import json
+import time
 
 # Imports pour l'authentification et la base de données
 try:
@@ -1662,24 +1663,28 @@ with tab4:
                         source = st.session_state['price_source_cache'].get(cache_key, 'Yahoo Finance')
                         return cached_result[0], cached_result[1], source, [source]
         
-        # Utiliser plusieurs sources si disponible
+        # Utiliser plusieurs sources si disponible (avec retry)
         if MULTI_SOURCE_AVAILABLE:
-            try:
-                price, currency, source, sources_checked = get_price_consensus(
-                    symbol, 
-                    use_cache=True,
-                    cache_dict=st.session_state['price_cache'],
-                    cache_time_dict=st.session_state['price_cache_time']
-                )
-                if price:
-                    # Mettre en cache
-                    st.session_state['price_cache'][cache_key] = (price, currency, source, sources_checked)
-                    st.session_state['price_cache_time'][cache_key] = datetime.now().timestamp()
-                    st.session_state['price_source_cache'][cache_key] = source
-                    return price, currency, source, sources_checked
-            except Exception as e:
-                # En cas d'erreur, continuer avec Yahoo Finance
-                pass
+            max_retries = 2
+            for attempt in range(max_retries):
+                try:
+                    price, currency, source, sources_checked = get_price_consensus(
+                        symbol, 
+                        use_cache=True,
+                        cache_dict=st.session_state['price_cache'],
+                        cache_time_dict=st.session_state['price_cache_time']
+                    )
+                    if price and price > 0:
+                        # Mettre en cache
+                        st.session_state['price_cache'][cache_key] = (price, currency, source, sources_checked)
+                        st.session_state['price_cache_time'][cache_key] = datetime.now().timestamp()
+                        st.session_state['price_source_cache'][cache_key] = source
+                        return price, currency, source, sources_checked
+                except Exception as e:
+                    # En cas d'erreur, attendre un peu avant de réessayer
+                    if attempt < max_retries - 1:
+                        time.sleep(0.5)
+                    continue
         
         # Liste des variantes de ticker à essayer (pour les ETFs européens notamment)
         ticker_variants = [symbol]
@@ -1718,9 +1723,11 @@ with tab4:
                                 elif '.L' in ticker_symbol:
                                     currency = 'GBP'
                             # Mettre en cache
-                            st.session_state['price_cache'][cache_key] = (current_price, currency)
+                            source = 'Yahoo Finance'
+                            sources_checked = [source]
+                            st.session_state['price_cache'][cache_key] = (current_price, currency, source, sources_checked)
                             st.session_state['price_cache_time'][cache_key] = datetime.now().timestamp()
-                            return current_price, currency
+                            return current_price, currency, source, sources_checked
                 except Exception as e:
                     pass
                 
@@ -1740,9 +1747,11 @@ with tab4:
                             else:
                                 currency = 'USD'
                             # Mettre en cache
-                            st.session_state['price_cache'][cache_key] = (current_price, currency)
+                            source = 'Yahoo Finance'
+                            sources_checked = [source]
+                            st.session_state['price_cache'][cache_key] = (current_price, currency, source, sources_checked)
                             st.session_state['price_cache_time'][cache_key] = datetime.now().timestamp()
-                            return current_price, currency
+                            return current_price, currency, source, sources_checked
                 except Exception as e:
                     pass
                 
@@ -1762,15 +1771,17 @@ with tab4:
                             else:
                                 currency = 'USD'
                             # Mettre en cache
-                            st.session_state['price_cache'][cache_key] = (current_price, currency)
+                            source = 'Yahoo Finance'
+                            sources_checked = [source]
+                            st.session_state['price_cache'][cache_key] = (current_price, currency, source, sources_checked)
                             st.session_state['price_cache_time'][cache_key] = datetime.now().timestamp()
-                            return current_price, currency
+                            return current_price, currency, source, sources_checked
                 except Exception as e:
                     pass
             except Exception as e:
                 continue
         
-        return None, None
+        return None, None, None, []
     
     # Fonction pour récupérer le prix d'une crypto en EUR
     def get_crypto_price(symbol):
