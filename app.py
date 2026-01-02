@@ -859,35 +859,35 @@ with tab_analyse:
         if selected_stock:
             stock_idx = [f"{s.get('symbol', '')} - {s.get('name', '')}" for s in results].index(selected_stock)
             stock = results[stock_idx]
-        
+            
             col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("#### 📊 Données fondamentales")
-            st.write(f"**Secteur:** {stock.get('sector', 'N/A')}")
-            st.write(f"**Croissance CA:** {stock.get('revenue_growth', 0)}%")
-            st.write(f"**Croissance bénéfices:** {stock.get('earnings_growth', 0)}%")
-            st.write(f"**Marge bénéficiaire:** {stock.get('profit_margin', 0)}%")
-            st.write(f"**ROE:** {stock.get('roe', 0)}%")
-            st.write(f"**PER:** {stock.get('pe', 'N/A')}")
-            st.write(f"**PEG:** {stock.get('peg', 'N/A')}")
-            st.write(f"**P/B:** {stock.get('price_to_book', 'N/A')}")
-        
-        with col2:
-            st.markdown("#### 📈 Données techniques")
-            st.write(f"**RSI:** {stock.get('rsi', 'N/A')}")
-            st.write(f"**Tendance long terme:** {stock.get('trend', 'N/A')}")
-            st.write(f"**Tendance court terme:** {stock.get('short_trend', 'N/A')}")
-            st.write(f"**Variation 1 mois:** {stock.get('change_1m', 'N/A')}%")
-            st.write(f"**Variation 3 mois:** {stock.get('change_3m', 'N/A')}%")
-            st.write(f"**Volatilité:** {stock.get('volatility', 'N/A')}%")
-            st.write(f"**SMA200:** {stock.get('sma200_eur', 'N/A')} €")
-        
+            
+            with col1:
+                st.markdown("#### 📊 Données fondamentales")
+                st.write(f"**Secteur:** {stock.get('sector', 'N/A')}")
+                st.write(f"**Croissance CA:** {stock.get('revenue_growth', 0)}%")
+                st.write(f"**Croissance bénéfices:** {stock.get('earnings_growth', 0)}%")
+                st.write(f"**Marge bénéficiaire:** {stock.get('profit_margin', 0)}%")
+                st.write(f"**ROE:** {stock.get('roe', 0)}%")
+                st.write(f"**PER:** {stock.get('pe', 'N/A')}")
+                st.write(f"**PEG:** {stock.get('peg', 'N/A')}")
+                st.write(f"**P/B:** {stock.get('price_to_book', 'N/A')}")
+            
+            with col2:
+                st.markdown("#### 📈 Données techniques")
+                st.write(f"**RSI:** {stock.get('rsi', 'N/A')}")
+                st.write(f"**Tendance long terme:** {stock.get('trend', 'N/A')}")
+                st.write(f"**Tendance court terme:** {stock.get('short_trend', 'N/A')}")
+                st.write(f"**Variation 1 mois:** {stock.get('change_1m', 'N/A')}%")
+                st.write(f"**Variation 3 mois:** {stock.get('change_3m', 'N/A')}%")
+                st.write(f"**Volatilité:** {stock.get('volatility', 'N/A')}%")
+                st.write(f"**SMA200:** {stock.get('sma200_eur', 'N/A')} €")
+            
             st.markdown("#### 💰 Zones d'achat (EUR)")
             st.write(f"**Prix actuel:** {stock.get('current_price_eur', 'N/A')} €")
             st.write(f"**🎯 Fourchette d'achat idéale:** {stock.get('buy_zone_low_eur', 'N/A')} € - {stock.get('buy_zone_high_eur', 'N/A')} €")
             st.write(f"**Support 6 mois:** {stock.get('support_6m_eur', 'N/A')} €")
-        
+            
             st.markdown("#### 🤖 Analyse IA")
             st.info(stock.get('avis_ia', 'Analyse non disponible'))
 
