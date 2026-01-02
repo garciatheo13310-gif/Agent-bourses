@@ -11,6 +11,7 @@ import time
 
 def get_price_yahoo_finance(symbol):
     """Récupère le prix depuis Yahoo Finance"""
+    ticker = None
     try:
         ticker = yf.Ticker(symbol)
         info = ticker.info
@@ -18,29 +19,62 @@ def get_price_yahoo_finance(symbol):
             price = (info.get('currentPrice') or 
                     info.get('regularMarketPrice') or 
                     info.get('previousClose') or
-                    info.get('regularMarketPreviousClose'))
+                    info.get('regularMarketPreviousClose') or
+                    info.get('navPrice'))  # Pour les ETFs
             if price and price > 0:
                 currency = info.get('currency', 'USD')
+                # Si pas de currency dans info, essayer de la déduire du ticker
+                if not currency or currency == 'USD':
+                    if '.PA' in symbol or '.AS' in symbol:
+                        currency = 'EUR'
+                    elif '.DE' in symbol:
+                        currency = 'EUR'
+                    elif '.L' in symbol:
+                        currency = 'GBP'
                 return price, currency, 'Yahoo Finance'
     except Exception as e:
         pass
     
     # Essayer avec l'historique
-    try:
-        hist = ticker.history(period="1d")
-        if not hist.empty:
-            price = hist['Close'].iloc[-1]
-            if price and price > 0:
-                currency = 'USD'  # Par défaut
-                if '.PA' in symbol or '.AS' in symbol:
-                    currency = 'EUR'
-                elif '.DE' in symbol:
-                    currency = 'EUR'
-                elif '.L' in symbol:
-                    currency = 'GBP'
-                return price, currency, 'Yahoo Finance'
-    except:
-        pass
+    if ticker is None:
+        try:
+            ticker = yf.Ticker(symbol)
+        except:
+            pass
+    
+    if ticker:
+        try:
+            hist = ticker.history(period="1d")
+            if not hist.empty:
+                price = hist['Close'].iloc[-1]
+                if price and price > 0 and not pd.isna(price):
+                    currency = 'USD'  # Par défaut
+                    if '.PA' in symbol or '.AS' in symbol:
+                        currency = 'EUR'
+                    elif '.DE' in symbol:
+                        currency = 'EUR'
+                    elif '.L' in symbol:
+                        currency = 'GBP'
+                    return price, currency, 'Yahoo Finance'
+        except:
+            pass
+        
+        # Dernier recours : historique 5 jours
+        try:
+            hist = ticker.history(period="5d")
+            if not hist.empty:
+                price = hist['Close'].iloc[-1]
+                if price and price > 0 and not pd.isna(price):
+                    currency = 'USD'  # Par défaut
+                    if '.PA' in symbol or '.AS' in symbol:
+                        currency = 'EUR'
+                    elif '.DE' in symbol:
+                        currency = 'EUR'
+                    elif '.L' in symbol:
+                        currency = 'GBP'
+                    return price, currency, 'Yahoo Finance'
+        except:
+            pass
     
     return None, None, None
 
