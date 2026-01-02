@@ -446,7 +446,7 @@ def screen_stocks(tickers, min_revenue_growth=None, min_earnings_growth=None, mi
                     print(f"   PEG: {peg_ratio if peg_ratio < 999 else 'N/A'} → {peg_ok}")
                 continue
             
-            # Récupération de données fondamentales supplémentaires
+            # Récupération de données fondamentales supplémentaires (AMÉLIORÉ)
             debt_to_equity = info.get('debtToEquity', None)
             current_ratio = info.get('currentRatio', None)  # Liquidité
             price_to_book = info.get('priceToBook', None)  # P/B
@@ -454,6 +454,24 @@ def screen_stocks(tickers, min_revenue_growth=None, min_earnings_growth=None, mi
             ebitda_margin = info.get('ebitdaMargins', None)
             free_cashflow = info.get('freeCashflow', None)
             market_cap = info.get('marketCap', None)
+            
+            # NOUVEAUX FACTEURS FONDAMENTAUX
+            net_margin = info.get('netProfitMargin', None) or info.get('profitMargins', None)  # Marge nette
+            gross_margin = info.get('grossMargins', None)  # Marge brute
+            operating_cashflow = info.get('operatingCashflow', None)  # Cash flow opérationnel
+            total_revenue = info.get('totalRevenue', None)  # Chiffre d'affaires total
+            earnings_per_share = info.get('trailingEps', None) or info.get('forwardEps', None)  # BPA
+            book_value = info.get('bookValue', None)  # Valeur comptable
+            dividend_yield = info.get('dividendYield', None)  # Rendement dividende
+            payout_ratio = info.get('payoutRatio', None)  # Ratio de distribution
+            
+            # Croissance des bénéfices sur plusieurs périodes
+            earnings_quarterly_growth = info.get('earningsQuarterlyGrowth', None)
+            earnings_yearly_growth = earnings_growth  # Déjà récupéré
+            
+            # Ratios de rentabilité supplémentaires
+            return_on_assets = info.get('returnOnAssets', None)  # ROA
+            return_on_capital = info.get('returnOnCapital', None)  # ROC
             
             # FILTRE SMALL CAPS - Exclure les entreprises avec capitalisation < MIN_MARKET_CAP
             if market_cap is not None and market_cap < MIN_MARKET_CAP:
@@ -469,16 +487,27 @@ def screen_stocks(tickers, min_revenue_growth=None, min_earnings_growth=None, mi
                 "price": round(price, 2),
                 "revenue_growth": round(revenue_growth * 100, 2) if revenue_growth else 0,
                 "earnings_growth": round(earnings_growth * 100, 2) if earnings_growth else 0,
+                "earnings_quarterly_growth": round(earnings_quarterly_growth * 100, 2) if earnings_quarterly_growth else None,
                 "peg": round(peg_ratio, 2) if peg_ratio < 999 else None,
                 "pe": round(pe_ratio, 2) if pe_ratio < 999 else None,
                 "roe": round(roe * 100, 2) if roe else 0,
                 "profit_margin": round(profit_margin * 100, 2) if profit_margin else 0,
+                "net_margin": round(net_margin * 100, 2) if net_margin else None,
+                "gross_margin": round(gross_margin * 100, 2) if gross_margin else None,
                 "debt_to_equity": round(debt_to_equity, 2) if debt_to_equity else None,
                 "current_ratio": round(current_ratio, 2) if current_ratio else None,
                 "price_to_book": round(price_to_book, 2) if price_to_book else None,
                 "operating_margin": round(operating_margin * 100, 2) if operating_margin else None,
                 "ebitda_margin": round(ebitda_margin * 100, 2) if ebitda_margin else None,
                 "free_cashflow": free_cashflow,
+                "operating_cashflow": operating_cashflow,
+                "total_revenue": total_revenue,
+                "earnings_per_share": round(earnings_per_share, 2) if earnings_per_share else None,
+                "book_value": round(book_value, 2) if book_value else None,
+                "dividend_yield": round(dividend_yield * 100, 2) if dividend_yield else None,
+                "payout_ratio": round(payout_ratio * 100, 2) if payout_ratio else None,
+                "return_on_assets": round(return_on_assets * 100, 2) if return_on_assets else None,
+                "return_on_capital": round(return_on_capital * 100, 2) if return_on_capital else None,
                 "market_cap": market_cap
             })
             

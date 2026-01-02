@@ -867,11 +867,25 @@ with tab_analyse:
                 st.write(f"**Secteur:** {stock.get('sector', 'N/A')}")
                 st.write(f"**Croissance CA:** {stock.get('revenue_growth', 0)}%")
                 st.write(f"**Croissance bénéfices:** {stock.get('earnings_growth', 0)}%")
+                if stock.get('earnings_quarterly_growth') is not None:
+                    st.write(f"**Croissance bénéfices (trimestriel):** {stock.get('earnings_quarterly_growth', 'N/A')}%")
                 st.write(f"**Marge bénéficiaire:** {stock.get('profit_margin', 0)}%")
+                if stock.get('net_margin') is not None:
+                    st.write(f"**Marge nette:** {stock.get('net_margin', 'N/A')}%")
+                if stock.get('gross_margin') is not None:
+                    st.write(f"**Marge brute:** {stock.get('gross_margin', 'N/A')}%")
                 st.write(f"**ROE:** {stock.get('roe', 0)}%")
+                if stock.get('return_on_assets') is not None:
+                    st.write(f"**ROA:** {stock.get('return_on_assets', 'N/A')}%")
+                if stock.get('return_on_capital') is not None:
+                    st.write(f"**ROC:** {stock.get('return_on_capital', 'N/A')}%")
                 st.write(f"**PER:** {stock.get('pe', 'N/A')}")
                 st.write(f"**PEG:** {stock.get('peg', 'N/A')}")
                 st.write(f"**P/B:** {stock.get('price_to_book', 'N/A')}")
+                if stock.get('earnings_per_share') is not None:
+                    st.write(f"**BPA:** {stock.get('earnings_per_share', 'N/A')} €")
+                if stock.get('dividend_yield') is not None:
+                    st.write(f"**Rendement dividende:** {stock.get('dividend_yield', 'N/A')}%")
             
             with col2:
                 st.markdown("#### 📈 Données techniques")
@@ -1608,9 +1622,65 @@ with tab4:
     if 'comptes_bancaires' not in st.session_state['portfolio']:
             st.session_state['portfolio']['comptes_bancaires'] = []
     
-    # Fonction pour récupérer le prix en temps réel
+    # Cache simple pour les prix (évite les requêtes répétées)
+    if 'price_cache' not in st.session_state:
+        st.session_state['price_cache'] = {}
+    if 'price_cache_time' not in st.session_state:
+        st.session_state['price_cache_time'] = {}
+    
+    # Importer le module de sources multiples
+    try:
+        from price_sources import get_price_consensus
+        MULTI_SOURCE_AVAILABLE = True
+    except ImportError:
+        MULTI_SOURCE_AVAILABLE = False
+        print("⚠️ Module price_sources non disponible, utilisation de Yahoo Finance uniquement")
+    
+    # Cache pour les sources utilisées
+    if 'price_source_cache' not in st.session_state:
+        st.session_state['price_source_cache'] = {}
+    
+    # Fonction pour récupérer le prix en temps réel depuis plusieurs sources
     def get_real_time_price(symbol):
-        """Récupère le prix actuel d'une action/ETF en temps réel"""
+        """Récupère le prix actuel d'une action/ETF en temps réel depuis plusieurs sources
+        Retourne: (prix, currency, source, sources_checked)
+        """
+        # Vérifier le cache (TTL: 5 minutes)
+        cache_key = symbol
+        if cache_key in st.session_state['price_cache']:
+            cache_time = st.session_state['price_cache_time'].get(cache_key, 0)
+            if (datetime.now().timestamp() - cache_time) < 300:  # 5 minutes
+                cached_result = st.session_state['price_cache'][cache_key]
+                # Le cache peut contenir (price, currency) ou (price, currency, source, sources_checked)
+                if isinstance(cached_result, tuple):
+                    if len(cached_result) >= 4:
+                        # Cache avec source
+                        st.session_state['price_source_cache'][cache_key] = cached_result[2]
+                        return cached_result[0], cached_result[1], cached_result[2], cached_result[3]
+                    elif len(cached_result) >= 2:
+                        # Cache sans source (ancien format)
+                        source = st.session_state['price_source_cache'].get(cache_key, 'Yahoo Finance')
+                        return cached_result[0], cached_result[1], source, [source]
+        
+        # Utiliser plusieurs sources si disponible
+        if MULTI_SOURCE_AVAILABLE:
+            try:
+                price, currency, source, sources_checked = get_price_consensus(
+                    symbol, 
+                    use_cache=True,
+                    cache_dict=st.session_state['price_cache'],
+                    cache_time_dict=st.session_state['price_cache_time']
+                )
+                if price:
+                    # Mettre en cache
+                    st.session_state['price_cache'][cache_key] = (price, currency, source, sources_checked)
+                    st.session_state['price_cache_time'][cache_key] = datetime.now().timestamp()
+                    st.session_state['price_source_cache'][cache_key] = source
+                    return price, currency, source, sources_checked
+            except Exception as e:
+                # En cas d'erreur, continuer avec Yahoo Finance
+                pass
+        
         # Liste des variantes de ticker à essayer (pour les ETFs européens notamment)
         ticker_variants = [symbol]
         
@@ -1647,6 +1717,9 @@ with tab4:
                                     currency = 'EUR'
                                 elif '.L' in ticker_symbol:
                                     currency = 'GBP'
+                            # Mettre en cache
+                            st.session_state['price_cache'][cache_key] = (current_price, currency)
+                            st.session_state['price_cache_time'][cache_key] = datetime.now().timestamp()
                             return current_price, currency
                 except Exception as e:
                     pass
@@ -1666,6 +1739,9 @@ with tab4:
                                 currency = 'GBP'
                             else:
                                 currency = 'USD'
+                            # Mettre en cache
+                            st.session_state['price_cache'][cache_key] = (current_price, currency)
+                            st.session_state['price_cache_time'][cache_key] = datetime.now().timestamp()
                             return current_price, currency
                 except Exception as e:
                     pass
@@ -1685,6 +1761,9 @@ with tab4:
                                 currency = 'GBP'
                             else:
                                 currency = 'USD'
+                            # Mettre en cache
+                            st.session_state['price_cache'][cache_key] = (current_price, currency)
+                            st.session_state['price_cache_time'][cache_key] = datetime.now().timestamp()
                             return current_price, currency
                 except Exception as e:
                     pass
@@ -2520,8 +2599,20 @@ with tab4:
                 # Récupérer le prix actuel automatiquement
                 if is_crypto:
                     prix_actuel_raw, currency = get_crypto_price(symbol)
+                    price_source = 'Yahoo Finance'
+                    sources_checked = ['Yahoo Finance']
                 else:
-                    prix_actuel_raw, currency = get_real_time_price(symbol)
+                    result = get_real_time_price(symbol)
+                    if len(result) >= 4:
+                        prix_actuel_raw, currency, price_source, sources_checked = result
+                    elif len(result) >= 2:
+                        prix_actuel_raw, currency = result
+                        price_source = 'Yahoo Finance'
+                        sources_checked = ['Yahoo Finance']
+                    else:
+                        prix_actuel_raw, currency = None, None
+                        price_source = 'N/A'
+                        sources_checked = []
                 
                 if prix_actuel_raw and prix_actuel_raw > 0:
                     # Convertir en EUR si nécessaire
@@ -2575,6 +2666,8 @@ with tab4:
                         'date_achat': pos['date_achat'],
                         'prix_disponible': True,
                         'prix_manuel': False,
+                        'price_source': price_source,  # Source du prix
+                        'sources_checked': ', '.join(sources_checked) if sources_checked else 'N/A',
                         'index_original': len(positions_detail)
                     })
                 else:
@@ -2591,6 +2684,10 @@ with tab4:
                         valeur_actuelle = investi
                         gain_perte = 0
                         rendement_pct = 0
+                        # Si pas de prix disponible, essayer quand même de récupérer la source
+                        if 'price_source' not in locals():
+                            price_source = 'N/A'
+                            sources_checked = []
                     
                     # Récupérer le nom de l'entreprise si pas déjà présent
                     company_name = pos.get('name')
@@ -2610,6 +2707,8 @@ with tab4:
                         'date_achat': pos['date_achat'],
                         'prix_disponible': False,  # Flag pour indiquer que le prix n'a pas pu être récupéré
                         'prix_manuel': bool(prix_manuel and prix_manuel > 0),
+                        'price_source': price_source if 'price_source' in locals() else 'N/A',
+                        'sources_checked': ', '.join(sources_checked) if 'sources_checked' in locals() and sources_checked else 'N/A',
                         'index_original': len(positions_detail)
                     })
             
@@ -2822,10 +2921,17 @@ with tab4:
             df_pea['compte'] = 'PEA'
             # Réorganiser les colonnes pour afficher le nom en premier
             if 'name' in df_pea.columns:
-                cols = ['name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'compte']
+                cols = ['name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'price_source', 'sources_checked', 'compte']
                 cols = [c for c in cols if c in df_pea.columns]
                 df_pea = df_pea[cols]
-                df_pea.columns = ['Nom', 'Ticker', 'Quantité', 'Prix Achat (€)*', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat', 'Compte']
+                # Ajuster les noms de colonnes selon ce qui est disponible
+                column_names = ['Nom', 'Ticker', 'Quantité', 'Prix Achat (€)*', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat']
+                if 'price_source' in cols:
+                    column_names.append('Source Prix')
+                if 'sources_checked' in cols:
+                    column_names.append('Sources Vérifiées')
+                column_names.append('Compte')
+                df_pea.columns = column_names
                 st.caption("* Prix d'achat inclut les frais XTB (si applicable)")
                 st.dataframe(df_pea, use_container_width=True, hide_index=True)
     
@@ -2882,10 +2988,16 @@ with tab4:
             df_ct['compte'] = 'CTO'
             # Réorganiser les colonnes pour afficher le nom en premier
             if 'name' in df_ct.columns:
-                cols = ['name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'compte']
+                cols = ['name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'price_source', 'sources_checked', 'compte']
                 cols = [c for c in cols if c in df_ct.columns]
                 df_ct = df_ct[cols]
-                df_ct.columns = ['Nom', 'Ticker', 'Quantité', 'Prix Achat (€)*', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat', 'Compte']
+                column_names = ['Nom', 'Ticker', 'Quantité', 'Prix Achat (€)*', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat']
+                if 'price_source' in cols:
+                    column_names.append('Source Prix')
+                if 'sources_checked' in cols:
+                    column_names.append('Sources Vérifiées')
+                column_names.append('Compte')
+                df_ct.columns = column_names
                 st.caption("* Prix d'achat inclut les frais XTB (si applicable)")
                 st.dataframe(df_ct, use_container_width=True, hide_index=True)
     
@@ -2943,10 +3055,16 @@ with tab4:
             df_crypto['compte'] = 'Crypto Kraken'
             # Réorganiser les colonnes pour afficher le nom en premier
             if 'name' in df_crypto.columns:
-                cols = ['name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'compte']
+                cols = ['name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'price_source', 'sources_checked', 'compte']
                 cols = [c for c in cols if c in df_crypto.columns]
                 df_crypto = df_crypto[cols]
-                df_crypto.columns = ['Nom', 'Ticker', 'Quantité', 'Prix de Revient (€)', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat', 'Compte']
+                column_names = ['Nom', 'Ticker', 'Quantité', 'Prix de Revient (€)', 'Prix Actuel (€)', 'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat']
+                if 'price_source' in cols:
+                    column_names.append('Source Prix')
+                if 'sources_checked' in cols:
+                    column_names.append('Sources Vérifiées')
+                column_names.append('Compte')
+                df_crypto.columns = column_names
                 st.dataframe(df_crypto, use_container_width=True, hide_index=True)
     
     # Tableau consolidé
@@ -2969,21 +3087,31 @@ with tab4:
         df_all = pd.DataFrame(all_positions)
         # Réorganiser les colonnes - inclure le nom si disponible
         if 'name' in df_all.columns:
-            # Afficher le nom en premier
-            cols = ['compte', 'name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 
-                'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat']
-            cols = [c for c in cols if c in df_all.columns]
-            df_all = df_all[cols]
-            df_all.columns = ['Compte', 'Nom', 'Ticker', 'Quantité', 'Prix Achat (€)', 'Prix Actuel (€)',
-                         'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat']
+                # Afficher le nom en premier
+                cols = ['compte', 'name', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 
+                    'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'price_source', 'sources_checked']
+                cols = [c for c in cols if c in df_all.columns]
+                df_all = df_all[cols]
+                column_names = ['Compte', 'Nom', 'Ticker', 'Quantité', 'Prix Achat (€)', 'Prix Actuel (€)',
+                             'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat']
+                if 'price_source' in cols:
+                    column_names.append('Source Prix')
+                if 'sources_checked' in cols:
+                    column_names.append('Sources Vérifiées')
+                df_all.columns = column_names
         else:
             # Si pas de nom, afficher seulement le ticker
             cols = ['compte', 'symbol', 'quantite', 'prix_achat', 'prix_actuel', 
-                'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat']
+                'investi', 'valeur_actuelle', 'gain_perte', 'rendement_pct', 'date_achat', 'price_source', 'sources_checked']
             cols = [c for c in cols if c in df_all.columns]
             df_all = df_all[cols]
-            df_all.columns = ['Compte', 'Ticker', 'Quantité', 'Prix Achat (€)', 'Prix Actuel (€)',
+            column_names = ['Compte', 'Ticker', 'Quantité', 'Prix Achat (€)', 'Prix Actuel (€)',
                          'Investi (€)', 'Valeur Actuelle (€)', 'Gain/Perte (€)', 'Rendement (%)', 'Date Achat']
+            if 'price_source' in cols:
+                column_names.append('Source Prix')
+            if 'sources_checked' in cols:
+                column_names.append('Sources Vérifiées')
+            df_all.columns = column_names
         st.dataframe(df_all, use_container_width=True, hide_index=True)
     
     # Graphique d'évolution (simulation basée sur les rendements)
