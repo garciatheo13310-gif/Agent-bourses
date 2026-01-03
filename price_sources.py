@@ -288,42 +288,196 @@ def get_price_marketwatch(symbol):
     return None, None, None
 
 def get_price_morningstar(symbol):
-    """Récupère le prix depuis Morningstar (via scraping ou API si disponible)"""
+    """Récupère le prix depuis Morningstar (via scraping amélioré)"""
     try:
-        # Morningstar a une API mais nécessite souvent une clé
-        # Pour l'instant, on essaie via scraping
-        symbol_clean = symbol.replace('.PA', '').replace('.AS', '').replace('.DE', '').replace('.L', '')
+        symbol_clean = symbol.replace('.PA', '').replace('.AS', '').replace('.DE', '').replace('.L', '').upper()
         
-        # Format URL Morningstar varie selon le marché
+        # URLs Morningstar selon le type de symbole
+        urls_to_try = []
+        
         if '.PA' in symbol or (len(symbol) <= 6 and not '.' in symbol):
-            # Action française
-            url = f"https://www.morningstar.fr/fr/funds/snapshot/snapshot.aspx?id={symbol_clean}"
+            # Actions françaises - plusieurs formats d'URL possibles
+            urls_to_try = [
+                f"https://www.morningstar.fr/fr/quote/{symbol_clean}",
+                f"https://www.morningstar.fr/fr/quote/stock/{symbol_clean}",
+                f"https://www.morningstar.fr/fr/funds/snapshot/snapshot.aspx?id={symbol_clean}",
+            ]
+        elif '.L' in symbol:
+            # Actions UK
+            urls_to_try = [
+                f"https://www.morningstar.co.uk/uk/quote/{symbol_clean}",
+            ]
         else:
-            # Action US
-            url = f"https://www.morningstar.com/stocks/xnas/{symbol_clean}/quote"
+            # Actions US - essayer plusieurs exchanges
+            urls_to_try = [
+                f"https://www.morningstar.com/stocks/xnas/{symbol_clean}/quote",
+                f"https://www.morningstar.com/stocks/xnys/{symbol_clean}/quote",
+                f"https://www.morningstar.com/stocks/xnys/{symbol_clean}",
+            ]
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+        
+        for url in urls_to_try:
+            try:
+                response = requests.get(url, headers=headers, timeout=10)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    
+                    # Méthode 1: Chercher dans les classes courantes de Morningstar
+                    price_elem = None
+                    for class_name in ['price', 'current-price', 'text-price', 'sal-price', 'mdc-price', 'quote-price']:
+                        price_elem = soup.find('span', class_=class_name) or \
+                                   soup.find('div', class_=class_name) or \
+                                   soup.find('td', class_=class_name)
+                        if price_elem:
+                            break
+                    
+                    # Méthode 2: Chercher par attribut data
+                    if not price_elem:
+                        price_elem = soup.find(attrs={'data-price': True}) or \
+                                   soup.find(attrs={'data-last': True}) or \
+                                   soup.find(attrs={'data-current-price': True})
+                    
+                    # Méthode 3: Chercher dans les scripts JSON-LD
+                    if not price_elem:
+                        scripts = soup.find_all('script', type='application/ld+json')
+                        for script in scripts:
+                            try:
+                                import json
+                                data = json.loads(script.string)
+                                if isinstance(data, dict):
+                                    # Chercher récursivement le prix
+                                    def find_price_in_dict(d):
+                                        if isinstance(d, dict):
+                                            for k, v in d.items():
+                                                if any(keyword in k.lower() for keyword in ['price', 'value', 'last', 'close']):
+                                                    if isinstance(v, (int, float)) and v > 0:
+                                                        return v
+                                                if isinstance(v, (dict, list)):
+                                                    result = find_price_in_dict(v)
+                                                    if result:
+                                                        return result
+                                        elif isinstance(d, list):
+                                            for item in d:
+                                                result = find_price_in_dict(item)
+                                                if result:
+                                                    return result
+                                        return None
+                                    price = find_price_in_dict(data)
+                                    if price and price > 0:
+                                        currency = 'EUR' if '.PA' in symbol or '.AS' in symbol or '.DE' in symbol else 'USD'
+                                        return float(price), currency, 'Morningstar'
+                            except:
+                                pass
+                    
+                    # Méthode 4: Chercher dans les tableaux de données
+                    if not price_elem:
+                        tables = soup.find_all('table')
+                        for table in tables:
+                            rows = table.find_all('tr')
+                            for row in rows:
+                                cells = row.find_all(['td', 'th'])
+                                for i, cell in enumerate(cells):
+                                    text = cell.get_text().strip()
+                                    if 'price' in text.lower() or 'last' in text.lower() or 'cours' in text.lower():
+                                        if i + 1 < len(cells):
+                                            price_text = cells[i + 1].get_text().strip()
+                                            try:
+                                                price = float(re.sub(r'[^\d.,]', '', price_text).replace(',', '.'))
+                                                if price > 0:
+                                                    currency = 'EUR' if '.PA' in symbol or '.AS' in symbol or '.DE' in symbol else 'USD'
+                                                    return price, currency, 'Morningstar'
+                                            except:
+                                                pass
+                    
+                    if price_elem:
+                        price_text = price_elem.get_text().strip()
+                        # Nettoyer le texte
+                        price_text = re.sub(r'[^\d.,]', '', price_text)
+                        price_text = price_text.replace(',', '.').replace(' ', '')
+                        try:
+                            price = float(price_text)
+                            if price > 0:
+                                # Déterminer la devise
+                                original_text = price_elem.get_text()
+                                if '€' in original_text or '.PA' in symbol or '.AS' in symbol or '.DE' in symbol:
+                                    currency = 'EUR'
+                                elif '£' in original_text or '.L' in symbol:
+                                    currency = 'GBP'
+                                else:
+                                    currency = 'USD'
+                                return price, currency, 'Morningstar'
+                        except:
+                            pass
+            except:
+                continue
+    except Exception as e:
+        pass
+    
+    return None, None, None
+
+def get_price_alpha_vantage(symbol):
+    """Récupère le prix depuis Alpha Vantage (API gratuite avec limite)"""
+    try:
+        # Alpha Vantage nécessite une clé API, mais on peut essayer sans clé pour certaines données publiques
+        # Pour l'instant, on skip cette source car elle nécessite une clé API
+        # Mais on garde la fonction pour l'avenir
+        pass
+    except:
+        pass
+    
+    return None, None, None
+
+def get_price_finance_yahoo_alternative(symbol):
+    """Récupère le prix depuis Yahoo Finance avec méthode alternative (API directe)"""
+    try:
+        # Essayer l'API directe de Yahoo Finance
+        symbol_clean = symbol.replace('.PA', '-PA').replace('.AS', '-AS').replace('.DE', '-DE').replace('.L', '-L')
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol_clean}"
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
         }
         
-        response = requests.get(url, headers=headers, timeout=5)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            # Chercher le prix (structure peut varier)
-            price_elem = soup.find('span', class_='price') or soup.find('div', class_='current-price')
-            if price_elem:
-                price_text = price_elem.get_text().strip().replace('$', '').replace('€', '').replace(',', '').replace(' ', '')
-                try:
-                    price = float(price_text)
-                    if price > 0:
-                        currency = 'EUR' if '€' in price_elem.get_text() else 'USD'
-                        return price, currency, 'Morningstar'
-                except:
-                    pass
-    except Exception as e:
+            data = response.json()
+            try:
+                if 'chart' in data and 'result' in data['chart'] and len(data['chart']['result']) > 0:
+                    result = data['chart']['result'][0]
+                    if 'meta' in result:
+                        price = result['meta'].get('regularMarketPrice') or result['meta'].get('previousClose')
+                        if price and price > 0:
+                            currency = result['meta'].get('currency', 'USD')
+                            if not currency or currency == 'USD':
+                                if '.PA' in symbol or '.AS' in symbol:
+                                    currency = 'EUR'
+                                elif '.DE' in symbol:
+                                    currency = 'EUR'
+                                elif '.L' in symbol:
+                                    currency = 'GBP'
+                            return float(price), currency, 'Yahoo Finance API'
+            except:
+                pass
+    except:
         pass
     
     return None, None, None
+
+def _validate_price(price, symbol, min_price=0.01, max_price=1000000):
+    """Valide qu'un prix est raisonnable"""
+    if not price or price <= 0:
+        return False
+    if price < min_price or price > max_price:
+        return False
+    return True
 
 def get_price_consensus(symbol, use_cache=True, cache_dict=None, cache_time_dict=None):
     """
@@ -336,17 +490,26 @@ def get_price_consensus(symbol, use_cache=True, cache_dict=None, cache_time_dict
     # Essayer Yahoo Finance en premier (le plus fiable généralement)
     try:
         price, currency, source = get_price_yahoo_finance(symbol)
-        if price:
+        if price and _validate_price(price, symbol):
             prices.append((price, currency, source))
             sources_checked.append(source)
     except Exception as e:
         sources_checked.append('Yahoo Finance (erreur)')
     
+    # Essayer Yahoo Finance API alternative
+    try:
+        price, currency, source = get_price_finance_yahoo_alternative(symbol)
+        if price and _validate_price(price, symbol):
+            prices.append((price, currency, source))
+            sources_checked.append(source)
+    except:
+        sources_checked.append('Yahoo Finance API (erreur)')
+    
     # Essayer Zone Bourse (pour actions françaises)
     if '.PA' in symbol or (len(symbol) <= 6 and not '.' in symbol):
         try:
             price, currency, source = get_price_zone_bourse(symbol)
-            if price:
+            if price and _validate_price(price, symbol):
                 prices.append((price, currency, source))
                 sources_checked.append(source)
         except:
@@ -355,7 +518,7 @@ def get_price_consensus(symbol, use_cache=True, cache_dict=None, cache_time_dict
         # Essayer Boursorama (pour actions françaises)
         try:
             price, currency, source = get_price_boursorama(symbol)
-            if price:
+            if price and _validate_price(price, symbol):
                 prices.append((price, currency, source))
                 sources_checked.append(source)
         except:
@@ -364,7 +527,7 @@ def get_price_consensus(symbol, use_cache=True, cache_dict=None, cache_time_dict
     # Essayer Investing.com
     try:
         price, currency, source = get_price_investing(symbol)
-        if price:
+        if price and _validate_price(price, symbol):
             prices.append((price, currency, source))
             sources_checked.append(source)
     except:
@@ -374,16 +537,16 @@ def get_price_consensus(symbol, use_cache=True, cache_dict=None, cache_time_dict
     if '.' not in symbol or symbol.endswith('.PA'):
         try:
             price, currency, source = get_price_marketwatch(symbol)
-            if price:
+            if price and _validate_price(price, symbol):
                 prices.append((price, currency, source))
                 sources_checked.append(source)
         except:
             sources_checked.append('MarketWatch (erreur)')
     
-    # Essayer Morningstar en dernier (souvent plus lent)
+    # Essayer Morningstar (amélioré avec plusieurs méthodes)
     try:
         price, currency, source = get_price_morningstar(symbol)
-        if price:
+        if price and _validate_price(price, symbol):
             prices.append((price, currency, source))
             sources_checked.append(source)
     except:
@@ -409,6 +572,13 @@ def get_price_consensus(symbol, use_cache=True, cache_dict=None, cache_time_dict
         main_currency = max(prices_by_currency.keys(), key=lambda k: len(prices_by_currency[k]))
         main_prices = prices_by_currency[main_currency]
         
+        # Filtrer les prix aberrants (écart > 50% de la médiane)
+        if len(main_prices) > 1:
+            median_price = sorted([p for p, s in main_prices])[len(main_prices) // 2]
+            filtered_prices = [(p, s) for p, s in main_prices if abs(p - median_price) / median_price < 0.5]
+            if filtered_prices:
+                main_prices = filtered_prices
+        
         # Calculer la moyenne
         avg_price = sum(p for p, s in main_prices) / len(main_prices)
         
@@ -418,7 +588,7 @@ def get_price_consensus(symbol, use_cache=True, cache_dict=None, cache_time_dict
         if max_price > 0 and (max_price - min_price) / max_price > 0.05:
             # Incohérence détectée, utiliser Yahoo Finance en priorité
             for p, c, s in prices:
-                if s == 'Yahoo Finance':
+                if s in ['Yahoo Finance', 'Yahoo Finance API']:
                     return p, c, s, sources_checked
         
         return avg_price, main_currency, 'Consensus', sources_checked

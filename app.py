@@ -1663,9 +1663,9 @@ with tab4:
                         source = st.session_state['price_source_cache'].get(cache_key, 'Yahoo Finance')
                         return cached_result[0], cached_result[1], source, [source]
         
-        # Utiliser plusieurs sources si disponible (avec retry)
+        # Utiliser plusieurs sources si disponible (avec retry amélioré)
         if MULTI_SOURCE_AVAILABLE:
-            max_retries = 2
+            max_retries = 3  # Augmenté à 3 tentatives
             for attempt in range(max_retries):
                 try:
                     price, currency, source, sources_checked = get_price_consensus(
@@ -1675,6 +1675,13 @@ with tab4:
                         cache_time_dict=st.session_state['price_cache_time']
                     )
                     if price and price > 0:
+                        # Validation supplémentaire du prix
+                        if price < 0.01 or price > 1000000:
+                            # Prix aberrant, réessayer
+                            if attempt < max_retries - 1:
+                                time.sleep(0.5)
+                                continue
+                        
                         # Mettre en cache
                         st.session_state['price_cache'][cache_key] = (price, currency, source, sources_checked)
                         st.session_state['price_cache_time'][cache_key] = datetime.now().timestamp()
@@ -1683,7 +1690,7 @@ with tab4:
                 except Exception as e:
                     # En cas d'erreur, attendre un peu avant de réessayer
                     if attempt < max_retries - 1:
-                        time.sleep(0.5)
+                        time.sleep(0.5 + attempt * 0.3)  # Délai progressif
                     continue
         
         # Liste des variantes de ticker à essayer (pour les ETFs européens notamment)
@@ -2626,38 +2633,64 @@ with tab4:
                         sources_checked = []
                 
                 if prix_actuel_raw and prix_actuel_raw > 0:
+                    # Validation du prix (éviter les valeurs aberrantes)
+                    prix_achat_float = float(prix_achat) if prix_achat else 0
+                    if prix_achat_float > 0:
+                        # Vérifier que le prix actuel n'est pas trop différent du prix d'achat (écart max 500%)
+                        ratio_prix = prix_actuel_raw / prix_achat_float if prix_achat_float > 0 else 1
+                        if ratio_prix > 6 or ratio_prix < 0.01:
+                            # Prix aberrant, utiliser le prix d'achat comme fallback
+                            prix_actuel_raw = prix_achat_float
+                            price_source = 'Prix d\'achat (fallback)'
+                    
                     # Convertir en EUR si nécessaire
                     # IMPORTANT: Pour XTB, on applique la commission de 0.5% sur le taux de change
-                    if currency == 'USD':
-                        prix_actuel_eur = usd_to_eur(prix_actuel_raw, apply_xtb_commission=True)
-                    elif currency in ['EUR', 'GBP', 'CHF']:
-                        # Pour les actions européennes, le prix est déjà dans la devise locale
-                        # On convertit si nécessaire (GBP, CHF -> EUR)
-                        if currency == 'GBP':
-                            try:
-                                gbpeur = yf.Ticker("GBPEUR=X")
-                                rate = gbpeur.history(period="1d")['Close'].iloc[-1]
-                                prix_actuel_eur = prix_actuel_raw * rate
-                            except:
-                                prix_actuel_eur = prix_actuel_raw * 1.17  # Approximation
-                        elif currency == 'CHF':
-                            try:
-                                chfeur = yf.Ticker("CHFEUR=X")
-                                rate = chfeur.history(period="1d")['Close'].iloc[-1]
-                                prix_actuel_eur = prix_actuel_raw * rate
-                            except:
-                                prix_actuel_eur = prix_actuel_raw * 1.02  # Approximation
+                    try:
+                        if currency == 'USD':
+                            prix_actuel_eur = usd_to_eur(prix_actuel_raw, apply_xtb_commission=True)
+                        elif currency in ['EUR', 'GBP', 'CHF']:
+                            # Pour les actions européennes, le prix est déjà dans la devise locale
+                            # On convertit si nécessaire (GBP, CHF -> EUR)
+                            if currency == 'GBP':
+                                try:
+                                    gbpeur = yf.Ticker("GBPEUR=X")
+                                    rate = gbpeur.history(period="1d")['Close'].iloc[-1]
+                                    prix_actuel_eur = prix_actuel_raw * rate
+                                except:
+                                    prix_actuel_eur = prix_actuel_raw * 1.17  # Approximation
+                            elif currency == 'CHF':
+                                try:
+                                    chfeur = yf.Ticker("CHFEUR=X")
+                                    rate = chfeur.history(period="1d")['Close'].iloc[-1]
+                                    prix_actuel_eur = prix_actuel_raw * rate
+                                except:
+                                    prix_actuel_eur = prix_actuel_raw * 1.02  # Approximation
+                            else:
+                                prix_actuel_eur = prix_actuel_raw  # Déjà en EUR
                         else:
-                            prix_actuel_eur = prix_actuel_raw  # Déjà en EUR
-                    else:
-                        # Autres devises, on assume USD
-                        prix_actuel_eur = usd_to_eur(prix_actuel_raw, apply_xtb_commission=True)
+                            # Autres devises, on assume USD
+                            prix_actuel_eur = usd_to_eur(prix_actuel_raw, apply_xtb_commission=True)
+                    except Exception as e:
+                        # En cas d'erreur de conversion, utiliser le prix brut
+                        prix_actuel_eur = prix_actuel_raw
+                    
+                    # Validation finale du prix en EUR
+                    if prix_actuel_eur <= 0 or prix_actuel_eur > 1000000:
+                        # Prix invalide, utiliser le prix d'achat
+                        prix_actuel_eur = prix_achat_float if prix_achat_float > 0 else prix_actuel_raw
+                        price_source = 'Prix d\'achat (fallback)'
                     
                     valeur_actuelle = quantite * prix_actuel_eur
                     total_actuel += valeur_actuelle
                     
                     gain_perte = valeur_actuelle - investi
                     rendement_pct = (gain_perte / investi) * 100 if investi > 0 else 0
+                    
+                    # Validation des calculs (éviter les valeurs aberrantes)
+                    if abs(rendement_pct) > 10000:  # Rendement > 10000% = probablement une erreur
+                        rendement_pct = 0
+                        gain_perte = 0
+                        valeur_actuelle = investi
                     
                     # Récupérer le nom de l'entreprise si pas déjà présent
                     company_name = pos.get('name')
