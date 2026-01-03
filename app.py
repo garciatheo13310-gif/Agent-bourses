@@ -686,7 +686,7 @@ with tab_analyse:
         all_results = st.session_state['results']
         scan_date = st.session_state.get('scan_date', 'N/A')
         
-        # Filtrer pour ne garder que les actions dans leur zone d'achat
+        # Fonction pour vérifier si dans la zone d'achat
         def is_in_buy_zone(stock):
             """Vérifie si le prix actuel est dans la zone d'achat recommandée"""
             current_price = stock.get('current_price_eur')
@@ -705,8 +705,14 @@ with tab_analyse:
             except (ValueError, TypeError):
                 return False
         
-        # Filtrer les résultats
-        results = [stock for stock in all_results if is_in_buy_zone(stock)]
+        # Trier les résultats par score (meilleurs en premier)
+        sorted_results = sorted(all_results, key=lambda x: x.get('score', 0), reverse=True)
+        
+        # Prendre les 10 meilleurs résultats (même s'ils ne sont pas tous en zone d'achat)
+        results = sorted_results[:10]
+        
+        # Compter combien sont dans la zone d'achat
+        in_zone_results = [stock for stock in results if is_in_buy_zone(stock)]
         
         st.markdown("---")
         if results:
@@ -718,22 +724,13 @@ with tab_analyse:
             margin: 2rem 0; 
             box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.3);'>
             <h2 style='color: white; margin: 0 0 0.5rem 0; font-size: 2rem; font-weight: 700;'>
-            🎯 {len(results)} Actions dans leur Zone d'Achat
+            🎯 Top {len(results)} Meilleures Actions (dont {len(in_zone_results)} en Zone d'Achat)
             </h2>
             <p style='color: rgba(255,255,255,0.9); margin: 0; font-size: 1rem;'>
             📅 Analyse du {scan_date} | {len(all_results)} actions analysées au total
             </p>
             </div>
             """, unsafe_allow_html=True)
-        else:
-            st.warning(f"⚠️ Aucune action n'est actuellement dans sa zone d'achat intéressante sur les {len(all_results)} analysées.")
-            st.info("💡 Vous pouvez voir toutes les actions analysées en désactivant le filtre ci-dessous.")
-            # Option pour voir toutes les actions
-            show_all = st.checkbox("Afficher toutes les actions analysées", value=False, key="show_all_stocks_analyse")
-            if show_all:
-                results = all_results
-            else:
-                st.stop()
         
         # Métriques principales avec style moderne
         st.markdown("<br>", unsafe_allow_html=True)
@@ -782,7 +779,7 @@ with tab_analyse:
             """, unsafe_allow_html=True)
         
         with col4:
-            in_zone_count = sum(1 for s in results if is_in_buy_zone(s))
+            in_zone_count = len(in_zone_results)
             st.markdown(f"""
             <div style='background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); 
                         padding: 1.5rem; 
