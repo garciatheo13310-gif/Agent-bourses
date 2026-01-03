@@ -1336,11 +1336,16 @@ with tab2:
                             )
                     
                 with col3:
+                            # S'assurer que la valeur par défaut ne dépasse pas le max_value
+                            prix_actuel = float(stock.get('current_price_eur', 100.0))
+                            max_prix = 1000000.0  # Limite élevée pour couvrir toutes les actions
+                            valeur_par_defaut = min(prix_actuel, max_prix) if prix_actuel > 0 else 100.0
+                            
                             prix_achat = st.number_input(
                             f"Prix d'achat (€)",
                             min_value=0.01,
-                            max_value=10000.0,
-                            value=float(stock.get('current_price_eur', 100.0)),
+                            max_value=max_prix,
+                            value=valeur_par_defaut,
                             step=0.01,
                             key=f"price_{i}"
                             )
