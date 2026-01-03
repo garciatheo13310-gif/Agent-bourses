@@ -17,6 +17,18 @@ except ImportError as e:
     st.error(f"❌ Erreur d'import auth/database: {e}")
     st.stop()
 
+# Imports pour la sécurité et les performances
+try:
+    from security import SecurityValidator, RateLimiter, InputSanitizer
+    from performance import CacheManager, PerformanceMonitor, RequestOptimizer
+    from logger import AppLogger
+    from config import Config
+    PRO_MODE = True
+except ImportError as e:
+    # Mode dégradé si les modules ne sont pas disponibles
+    PRO_MODE = False
+    print(f"⚠️ Mode pro non disponible: {e}")
+
 # Ajouter le répertoire parent au path pour importer main
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
