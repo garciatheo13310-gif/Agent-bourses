@@ -686,9 +686,9 @@ with tab_analyse:
         all_results = st.session_state['results']
         scan_date = st.session_state.get('scan_date', 'N/A')
         
-        # Fonction pour vérifier si dans la zone d'achat
+        # Fonction pour vérifier si dans la zone d'achat (avec tolérance de 5% au-dessus pour vision long terme)
         def is_in_buy_zone(stock):
-            """Vérifie si le prix actuel est dans la zone d'achat recommandée"""
+            """Vérifie si le prix actuel est dans la zone d'achat recommandée (avec tolérance pour vision long terme)"""
             current_price = stock.get('current_price_eur')
             buy_low = stock.get('buy_zone_low_eur')
             buy_high = stock.get('buy_zone_high_eur')
@@ -701,7 +701,13 @@ with tab_analyse:
                 current = float(current_price)
                 low = float(buy_low)
                 high = float(buy_high)
-                return low <= current <= high
+                
+                # Zone d'achat : entre le bas et le haut + 5% de tolérance pour vision long terme
+                # Cela permet d'inclure les actions légèrement au-dessus mais toujours intéressantes
+                tolerance = high * 0.05  # 5% de tolérance
+                extended_high = high + tolerance
+                
+                return low <= current <= extended_high
             except (ValueError, TypeError):
                 return False
         

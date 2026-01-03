@@ -704,15 +704,16 @@ def get_technical_data(candidate):
         else:
             fib_236 = fib_382 = fib_500 = fib_618 = None
         
-        # Zone d'achat optimale : fourchette plus précise pour vision long terme (2-3% au lieu de 5-10%)
+        # Zone d'achat optimale : fourchette équilibrée pour vision long terme (3-4% pour plus de précision)
         if current_price > sma:
-            # Tendance haussière : zone d'achat autour de SMA200 avec fourchette serrée
-            buy_zone_low = sma * 0.98  # 2% sous SMA200 (plus précis)
-            buy_zone_high = sma * 1.02  # 2% au-dessus SMA200 (plus précis)
+            # Tendance haussière : zone d'achat autour de SMA200 avec fourchette équilibrée
+            # Utiliser le minimum entre support 6 mois et SMA200 pour la borne basse
+            buy_zone_low = min(support_6m, sma * 0.97)  # 3% sous SMA200 ou support 6 mois
+            buy_zone_high = sma * 1.03  # 3% au-dessus SMA200
         else:
-            # Tendance baissière : zone d'achat autour du support 6 mois avec fourchette serrée
-            buy_zone_low = support_6m * 0.97  # 3% sous support 6 mois (plus précis)
-            buy_zone_high = support_6m * 1.03  # 3% au-dessus support 6 mois (plus précis)
+            # Tendance baissière : zone d'achat autour du support 6 mois avec fourchette équilibrée
+            buy_zone_low = support_6m * 0.96  # 4% sous support 6 mois
+            buy_zone_high = support_6m * 1.04  # 4% au-dessus support 6 mois
         
         # Récupération du taux de change USD/EUR
         try:
