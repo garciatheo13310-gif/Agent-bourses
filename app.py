@@ -625,7 +625,7 @@ with tab_analyse:
                 block += f"\n{'='*70}"
                 block += f"\n🏢 {stock.get('name', 'N/A')} ({stock.get('symbol', 'N/A')}) | Secteur: {stock.get('sector', 'N/A')}"
                 block += f"\n💰 PRIX ACTUEL: {stock.get('current_price_eur', 'N/A')} €"
-                block += f"\n📊 CROISSANCE CA: {stock.get('revenue_growth', 0)}% | ROE: {stock.get('roe', 0)}%"
+                block += f"\n📊 CROISSANCE CA (par an, dernière année): {stock.get('revenue_growth', 0)}% | ROE: {stock.get('roe', 0)}%"
                 block += f"\n🎯 ZONE D'ACHAT: {stock.get('buy_zone_low_eur', 'N/A')} € - {stock.get('buy_zone_high_eur', 'N/A')} €"
                 block += f"\n🤖 ANALYSE IA:\n{avis}\n"
                 block += f"\n{'-'*70}\n"
@@ -782,7 +782,7 @@ with tab_analyse:
                         color: white; 
                         text-align: center;
                         box-shadow: 0 4px 6px -1px rgba(245, 87, 108, 0.3);'>
-            <p style='margin: 0 0 0.5rem 0; font-size: 0.9rem; opacity: 0.9;'>Croissance CA moyenne</p>
+            <p style='margin: 0 0 0.5rem 0; font-size: 0.9rem; opacity: 0.9;'>Croissance CA moyenne (an)</p>
             <h2 style='margin: 0; font-size: 2.5rem; font-weight: 700;'>{avg_revenue_growth:.1f}<span style='font-size: 1.5rem;'>%</span></h2>
             </div>
             """, unsafe_allow_html=True)
@@ -864,8 +864,8 @@ with tab_analyse:
                 'Zone Achat Haute (€)': buy_high if buy_high != 'N/A' else 'N/A',
                 'Écart Zone': ecart,
                 'Dans Zone': in_zone,
-                'Croissance CA (%)': f"{stock.get('revenue_growth', 0):.1f}",
-                'Croissance Bénéfices (%)': f"{stock.get('earnings_growth', 0):.1f}",
+                'Croissance CA (%/an)': f"{stock.get('revenue_growth', 0):.1f}",
+                'Croissance Bénéfices (%/an)': f"{stock.get('earnings_growth', 0):.1f}",
                 'ROE (%)': f"{stock.get('roe', 0):.1f}",
                 'Marge (%)': f"{stock.get('profit_margin', 0):.1f}",
                 'PER': stock.get('pe', 'N/A'),
@@ -898,8 +898,8 @@ with tab_analyse:
             with col1:
                 st.markdown("#### 📊 Données fondamentales")
                 st.write(f"**Secteur:** {stock.get('sector', 'N/A')}")
-                st.write(f"**Croissance CA:** {stock.get('revenue_growth', 0)}%")
-                st.write(f"**Croissance bénéfices:** {stock.get('earnings_growth', 0)}%")
+                st.write(f"**Croissance CA (par an, dernière année):** {stock.get('revenue_growth', 0)}%")
+                st.write(f"**Croissance bénéfices (par an, dernière année):** {stock.get('earnings_growth', 0)}%")
                 if stock.get('earnings_quarterly_growth') is not None:
                     st.write(f"**Croissance bénéfices (trimestriel):** {stock.get('earnings_quarterly_growth', 'N/A')}%")
                 st.write(f"**Marge bénéficiaire:** {stock.get('profit_margin', 0)}%")
