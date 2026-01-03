@@ -711,14 +711,31 @@ with tab_analyse:
             except (ValueError, TypeError):
                 return False
         
-        # Trier les résultats par score (meilleurs en premier)
-        sorted_results = sorted(all_results, key=lambda x: x.get('score', 0), reverse=True)
+        # Stratégie de tri hybride : prioriser les actions en zone d'achat, mais garder les meilleures par score
+        # Séparer les actions en zone d'achat et hors zone
+        in_zone_stocks = [stock for stock in all_results if is_in_buy_zone(stock)]
+        out_zone_stocks = [stock for stock in all_results if not is_in_buy_zone(stock)]
         
-        # Prendre les 10 meilleurs résultats (même s'ils ne sont pas tous en zone d'achat)
-        results = sorted_results[:10]
+        # Trier chaque groupe par score
+        in_zone_stocks.sort(key=lambda x: x.get('score', 0), reverse=True)
+        out_zone_stocks.sort(key=lambda x: x.get('score', 0), reverse=True)
+        
+        # Combiner intelligemment : 
+        # - Si on a 4+ actions en zone d'achat : prendre jusqu'à 6 en zone + 4 meilleures hors zone
+        # - Sinon : prendre toutes les actions en zone + compléter avec les meilleures hors zone jusqu'à 10
+        if len(in_zone_stocks) >= 4:
+            # Priorité aux actions en zone d'achat (jusqu'à 6)
+            max_in_zone = min(6, len(in_zone_stocks))
+            max_out_zone = 10 - max_in_zone
+        else:
+            # Prendre toutes les actions en zone + compléter avec les meilleures
+            max_in_zone = len(in_zone_stocks)
+            max_out_zone = 10 - max_in_zone
+        
+        results = in_zone_stocks[:max_in_zone] + out_zone_stocks[:max_out_zone]
         
         # Compter combien sont dans la zone d'achat
-        in_zone_results = [stock for stock in results if is_in_buy_zone(stock)]
+        in_zone_results = in_zone_stocks[:max_in_zone]
         
         st.markdown("---")
         if results:

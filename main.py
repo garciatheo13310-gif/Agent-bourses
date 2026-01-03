@@ -591,9 +591,10 @@ def score_and_rank_stocks(candidates):
         stock['score'] = round(score, 2)
         scored_stocks.append(stock)
     
-    # Trier par score décroissant et garder les TOP N
+    # Trier par score décroissant et garder les TOP N (augmenté à 30 pour avoir plus de choix)
     scored_stocks.sort(key=lambda x: x['score'], reverse=True)
-    top_stocks = scored_stocks[:TOP_N]
+    # Garder les 30 meilleures pour avoir plus de flexibilité dans l'affichage
+    top_stocks = scored_stocks[:30]  # Augmenté de 20 à 30 pour plus de diversité
     
     return top_stocks
 
