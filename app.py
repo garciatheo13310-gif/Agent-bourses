@@ -1262,8 +1262,9 @@ with tab2:
     st.subheader("🎯 Simulateur de Portefeuille avec Stop-Loss")
     st.markdown("**Simulez un portefeuille avec gestion du risque (stop-loss et prise de profit)**")
     
-    if 'results' in st.session_state and st.session_state['results']:
-        available_stocks = st.session_state['results']
+    available_stocks = st.session_state['results'] if st.session_state.get('results') else []
+    
+    if available_stocks:
         
         col1, col2 = st.columns(2)
         
@@ -1443,6 +1444,171 @@ with tab2:
             """)
         else:
             st.warning("⚠️ Lancez d'abord une analyse pour utiliser le simulateur de portefeuille.")
+
+    # ============================================
+    # Actions à surveiller (hors portefeuille réel)
+    # ============================================
+    st.markdown("---")
+    st.subheader("👀 Actions à surveiller (hors portefeuille réel)")
+    st.markdown("**Ajoutez des actions que vous n'avez pas encore pour suivre leur croissance**")
+
+    if 'watchlist_simulator' not in st.session_state:
+        st.session_state['watchlist_simulator'] = []
+    if 'watchlist_price_cache' not in st.session_state:
+        st.session_state['watchlist_price_cache'] = {}
+    if 'watchlist_price_cache_time' not in st.session_state:
+        st.session_state['watchlist_price_cache_time'] = {}
+
+    def find_stock_in_results(symbol):
+        """Retourne l'action depuis les résultats si présente, sinon None."""
+        symbol_upper = (symbol or "").upper().strip()
+        for stock in available_stocks:
+            if (stock.get('symbol', '') or '').upper().strip() == symbol_upper:
+                return stock
+        return None
+
+    def get_watchlist_price(symbol, fallback_price=None):
+        """Récupère le prix actuel avec cache léger."""
+        cache_key = f"watch_{symbol}"
+        cache_ttl = 60 * 5  # 5 minutes
+        cache_time = st.session_state['watchlist_price_cache_time'].get(cache_key, 0)
+        if cache_key in st.session_state['watchlist_price_cache'] and (time.time() - cache_time) < cache_ttl:
+            return st.session_state['watchlist_price_cache'][cache_key]
+
+        if fallback_price and fallback_price > 0:
+            st.session_state['watchlist_price_cache'][cache_key] = (fallback_price, "EUR")
+            st.session_state['watchlist_price_cache_time'][cache_key] = time.time()
+            return fallback_price, "EUR"
+
+        try:
+            ticker = yf.Ticker(symbol)
+            info = ticker.info or {}
+            price = (info.get('currentPrice') or info.get('regularMarketPrice') or
+                     info.get('previousClose') or info.get('navPrice'))
+            currency = info.get('currency', 'EUR')
+            if not price:
+                hist = ticker.history(period="5d")
+                if not hist.empty:
+                    price = float(hist['Close'].iloc[-1])
+            if price and price > 0:
+                st.session_state['watchlist_price_cache'][cache_key] = (float(price), currency)
+                st.session_state['watchlist_price_cache_time'][cache_key] = time.time()
+                return float(price), currency
+        except Exception:
+            pass
+
+        return None, None
+
+    col1, col2 = st.columns([2, 3])
+    with col1:
+        mode_ajout = st.radio(
+            "Mode d'ajout",
+            ["Depuis recommandations", "Saisie manuelle"],
+            horizontal=True,
+            key="watchlist_mode"
+        )
+
+    with col2:
+        with st.form("watchlist_add_form"):
+            if available_stocks and mode_ajout == "Depuis recommandations":
+                options = [f"{s.get('symbol', '')} - {s.get('name', '')}" for s in available_stocks]
+                selected_option = st.selectbox("Choisir une action recommandée", options)
+                symbol_input = selected_option.split(" - ")[0].strip()
+                stock_ref = find_stock_in_results(symbol_input) or {}
+                buy_low = stock_ref.get('buy_zone_low_eur')
+                buy_high = stock_ref.get('buy_zone_high_eur')
+                if buy_low and buy_high:
+                    prix_ref_defaut = (float(buy_low) + float(buy_high)) / 2
+                else:
+                    prix_ref_defaut = float(stock_ref.get('current_price_eur', 100.0))
+                nom_ref = stock_ref.get('name', '')
+            else:
+                symbol_input = st.text_input("Ticker", placeholder="AAPL, MSFT, AIR.PA...")
+                nom_ref = st.text_input("Nom (optionnel)", value="")
+                prix_ref_defaut = 100.0
+
+            prix_reference = st.number_input(
+                "Prix de référence (€)",
+                min_value=0.01,
+                value=float(prix_ref_defaut) if prix_ref_defaut else 100.0,
+                step=0.01,
+                key="watchlist_price_ref"
+            )
+            quantite = st.number_input("Quantité suivie", min_value=1.0, value=1.0, step=1.0, key="watchlist_qty")
+            note = st.text_input("Note (optionnel)", value="", key="watchlist_note")
+
+            submitted = st.form_submit_button("Ajouter à la surveillance")
+            if submitted:
+                symbol_clean = (symbol_input or "").upper().strip()
+                if not symbol_clean:
+                    st.error("Veuillez saisir un ticker valide.")
+                else:
+                    exists = any(i['symbol'] == symbol_clean for i in st.session_state['watchlist_simulator'])
+                    if exists:
+                        st.warning("Cette action est déjà dans la liste de surveillance.")
+                    else:
+                        st.session_state['watchlist_simulator'].append({
+                            'symbol': symbol_clean,
+                            'name': nom_ref,
+                            'prix_reference': float(prix_reference),
+                            'quantite': float(quantite),
+                            'note': note.strip()
+                        })
+                        st.success(f"✅ {symbol_clean} ajouté à la surveillance.")
+
+    if st.session_state['watchlist_simulator']:
+        st.markdown("### 📊 Suivi des actions surveillées")
+        watch_rows = []
+        for idx, item in enumerate(st.session_state['watchlist_simulator']):
+            stock_ref = find_stock_in_results(item['symbol'])
+            fallback_price = None
+            zone_low = None
+            zone_high = None
+            if stock_ref:
+                fallback_price = stock_ref.get('current_price_eur')
+                zone_low = stock_ref.get('buy_zone_low_eur')
+                zone_high = stock_ref.get('buy_zone_high_eur')
+
+            current_price, currency = get_watchlist_price(item['symbol'], fallback_price=fallback_price)
+            prix_ref = item['prix_reference']
+            perf_pct = ((current_price - prix_ref) / prix_ref * 100) if current_price and prix_ref else None
+            perf_eur = ((current_price - prix_ref) * item['quantite']) if current_price and prix_ref else None
+
+            if zone_low and zone_high and current_price:
+                try:
+                    zone_low_f = float(zone_low)
+                    zone_high_f = float(zone_high)
+                    in_zone = "✅" if zone_low_f <= current_price <= zone_high_f else "❌"
+                except Exception:
+                    in_zone = "N/A"
+            else:
+                in_zone = "N/A"
+
+            watch_rows.append({
+                "Action": item['symbol'],
+                "Nom": item.get('name', ''),
+                "Prix réf. (€)": round(prix_ref, 2),
+                "Prix actuel": round(current_price, 2) if current_price else "N/A",
+                "Devise": currency or "N/A",
+                "Perf (%)": f"{perf_pct:+.2f}%" if perf_pct is not None else "N/A",
+                "Perf (€)": f"{perf_eur:+.2f}" if perf_eur is not None else "N/A",
+                "Zone achat basse (€)": zone_low if zone_low else "N/A",
+                "Zone achat haute (€)": zone_high if zone_high else "N/A",
+                "Dans zone": in_zone,
+                "Note": item.get('note', '')
+            })
+
+        st.dataframe(pd.DataFrame(watch_rows), use_container_width=True, hide_index=True)
+
+        st.markdown("### 🗑️ Gérer la liste de surveillance")
+        cols = st.columns(4)
+        for i, item in enumerate(list(st.session_state['watchlist_simulator'])):
+            with cols[i % 4]:
+                if st.button(f"Retirer {item['symbol']}", key=f"watch_remove_{i}"):
+                    st.session_state['watchlist_simulator'].pop(i)
+                    st.rerun()
+    else:
+        st.info("Ajoutez des actions pour commencer le suivi.")
 
 # ============================================
 # TAB 3: SUIVI DE PERFORMANCE HISTORIQUE
