@@ -33,38 +33,41 @@ except ImportError as e:
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from main import (
-        get_sp500_tickers, 
-        get_eurostoxx_tickers,
-        get_nasdaq100_tickers,
-        get_dowjones_tickers,
-        get_emerging_markets_tickers,
-        get_asia_pacific_tickers,
-        get_canada_tickers,
-        screen_stocks,
-        score_and_rank_stocks,
-        get_technical_data,
-        ask_ai_opinion,
-        send_email,
-        TOP_N,
-        MIN_REVENUE_GROWTH,
-        MIN_EARNINGS_GROWTH,
-        MIN_ROE,
-        MIN_PROFIT_MARGIN,
-        MIN_PE_RATIO,
-        MAX_PE_RATIO,
-        MIN_PEG_RATIO,
-        MAX_PEG_RATIO,
-        MIN_NET_MARGIN,
-        MIN_GROSS_MARGIN,
-        MIN_OPERATING_MARGIN,
-        MIN_FREE_CASHFLOW,
-        MAX_DEBT_TO_EQUITY,
-        MIN_CURRENT_RATIO,
-        MIN_ROA,
-        MIN_ROC
-    )
+    import main as main_module
     import yfinance as yf
+
+    get_sp500_tickers = main_module.get_sp500_tickers
+    get_eurostoxx_tickers = main_module.get_eurostoxx_tickers
+    get_nasdaq100_tickers = main_module.get_nasdaq100_tickers
+    get_dowjones_tickers = main_module.get_dowjones_tickers
+    get_emerging_markets_tickers = main_module.get_emerging_markets_tickers
+    get_asia_pacific_tickers = main_module.get_asia_pacific_tickers
+    get_canada_tickers = main_module.get_canada_tickers
+    screen_stocks = main_module.screen_stocks
+    score_and_rank_stocks = main_module.score_and_rank_stocks
+    get_technical_data = main_module.get_technical_data
+    ask_ai_opinion = main_module.ask_ai_opinion
+    send_email = main_module.send_email
+    TOP_N = main_module.TOP_N
+
+    MIN_REVENUE_GROWTH = main_module.MIN_REVENUE_GROWTH
+    MIN_EARNINGS_GROWTH = main_module.MIN_EARNINGS_GROWTH
+    MIN_ROE = main_module.MIN_ROE
+    MIN_PROFIT_MARGIN = main_module.MIN_PROFIT_MARGIN
+    MIN_PE_RATIO = main_module.MIN_PE_RATIO
+    MAX_PE_RATIO = main_module.MAX_PE_RATIO
+    MIN_PEG_RATIO = main_module.MIN_PEG_RATIO
+    MAX_PEG_RATIO = main_module.MAX_PEG_RATIO
+
+    # Valeurs par défaut si l'ancien main.py ne les expose pas
+    MIN_NET_MARGIN = getattr(main_module, "MIN_NET_MARGIN", 0.05)
+    MIN_GROSS_MARGIN = getattr(main_module, "MIN_GROSS_MARGIN", 0.25)
+    MIN_OPERATING_MARGIN = getattr(main_module, "MIN_OPERATING_MARGIN", 0.08)
+    MIN_FREE_CASHFLOW = getattr(main_module, "MIN_FREE_CASHFLOW", 0)
+    MAX_DEBT_TO_EQUITY = getattr(main_module, "MAX_DEBT_TO_EQUITY", 2.0)
+    MIN_CURRENT_RATIO = getattr(main_module, "MIN_CURRENT_RATIO", 1.0)
+    MIN_ROA = getattr(main_module, "MIN_ROA", 0.03)
+    MIN_ROC = getattr(main_module, "MIN_ROC", 0.05)
 except ImportError as e:
     st.error(f"❌ Erreur d'import: {e}")
     st.stop()
