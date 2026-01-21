@@ -54,7 +54,15 @@ try:
         MIN_PE_RATIO,
         MAX_PE_RATIO,
         MIN_PEG_RATIO,
-        MAX_PEG_RATIO
+        MAX_PEG_RATIO,
+        MIN_NET_MARGIN,
+        MIN_GROSS_MARGIN,
+        MIN_OPERATING_MARGIN,
+        MIN_FREE_CASHFLOW,
+        MAX_DEBT_TO_EQUITY,
+        MIN_CURRENT_RATIO,
+        MIN_ROA,
+        MIN_ROC
     )
     import yfinance as yf
 except ImportError as e:
@@ -408,15 +416,16 @@ st.sidebar.markdown("""
 
 scan_option = st.sidebar.radio(
     "",
-    ["Rapide (50 actions)", "Moyen (200 actions)", "Complet (1000+ actions)"],
-    index=1,
+    ["Rapide (50 actions)", "Moyen (200 actions)", "Complet (1000+ actions)", "Ultra (toutes actions)"],
+    index=2,
     label_visibility="collapsed"
 )
 
 scan_limits = {
     "Rapide (50 actions)": 50,
     "Moyen (200 actions)": 200,
-    "Complet (1000+ actions)": 1000
+    "Complet (1000+ actions)": 1000,
+    "Ultra (toutes actions)": None
 }
 
 limit = scan_limits[scan_option]
@@ -456,6 +465,69 @@ min_profit_margin = st.sidebar.slider(
     "Marge bénéficiaire minimum",
     3.0, 20.0, float(MIN_PROFIT_MARGIN * 100), 0.5,
     help="Marge bénéficiaire minimum en pourcentage"
+) / 100
+
+st.sidebar.markdown("""
+    <div class="param-section">
+        <div class="param-section-title">📌 Fondamentaux avancés</div>
+    </div>
+""", unsafe_allow_html=True)
+
+apply_advanced_fundamentals = st.sidebar.checkbox(
+    "Activer filtres avancés",
+    value=True,
+    help="Affinez la sélection avec des critères fondamentaux avancés"
+)
+
+min_net_margin = st.sidebar.slider(
+    "Marge nette minimum",
+    0.0, 30.0, float(MIN_NET_MARGIN * 100), 1.0,
+    help="Marge nette minimale en pourcentage"
+) / 100
+
+min_gross_margin = st.sidebar.slider(
+    "Marge brute minimum",
+    0.0, 70.0, float(MIN_GROSS_MARGIN * 100), 1.0,
+    help="Marge brute minimale en pourcentage"
+) / 100
+
+min_operating_margin = st.sidebar.slider(
+    "Marge opérationnelle minimum",
+    0.0, 30.0, float(MIN_OPERATING_MARGIN * 100), 1.0,
+    help="Marge opérationnelle minimale en pourcentage"
+) / 100
+
+min_free_cashflow_m = st.sidebar.number_input(
+    "Free Cash Flow min (M$)",
+    min_value=-10000.0,
+    max_value=50000.0,
+    value=float(MIN_FREE_CASHFLOW / 1_000_000),
+    step=50.0,
+    help="Free Cash Flow minimal en millions USD (0 = positif)"
+)
+
+max_debt_to_equity = st.sidebar.slider(
+    "Debt/Equity max",
+    0.0, 5.0, float(MAX_DEBT_TO_EQUITY), 0.1,
+    help="Dette / Fonds propres maximum"
+)
+
+min_current_ratio = st.sidebar.slider(
+    "Current Ratio min",
+    0.5, 3.0, float(MIN_CURRENT_RATIO), 0.1,
+    help="Ratio de liquidité minimum"
+)
+
+min_roa = st.sidebar.slider(
+    "ROA minimum",
+    0.0, 20.0, float(MIN_ROA * 100), 1.0,
+    help="Return on Assets minimum en pourcentage"
+) / 100
+
+min_roc = st.sidebar.slider(
+    "ROC minimum",
+    0.0, 30.0, float(MIN_ROC * 100), 1.0,
+    help="Return on Capital minimum en pourcentage"
 ) / 100
 
 st.sidebar.markdown("""
@@ -560,12 +632,13 @@ with tab_analyse:
         status_text.text(f"✅ {len(us_tickers)} S&P500, {len(nasdaq_tickers)} NASDAQ, {len(dow_tickers)} Dow, {len(eu_tickers)} EU, {len(emerging_tickers)} Émergents, {len(asia_tickers)} Asie, {len(canada_tickers)} Canada")
         
         # Filtrage avec progression
-        status_text.text(f"🔍 Analyse de {len(all_tickers[:limit])} actions... (2-5 minutes)")
+        tickers_to_scan = all_tickers if limit is None else all_tickers[:limit]
+        status_text.text(f"🔍 Analyse de {len(tickers_to_scan)} actions... (2-5 minutes)")
         progress_bar.progress(25)
         
         # Utiliser tqdm pour suivre la progression dans screen_stocks avec les paramètres personnalisés
         opportunities = screen_stocks(
-        all_tickers[:limit],
+        tickers_to_scan,
         min_revenue_growth=min_revenue_growth,
         min_earnings_growth=min_earnings_growth,
         min_roe=min_roe,
@@ -573,7 +646,16 @@ with tab_analyse:
         min_pe_ratio=min_pe_ratio,
         max_pe_ratio=max_pe_ratio,
         min_peg_ratio=min_peg_ratio,
-        max_peg_ratio=max_peg_ratio
+        max_peg_ratio=max_peg_ratio,
+        min_net_margin=min_net_margin if apply_advanced_fundamentals else None,
+        min_gross_margin=min_gross_margin if apply_advanced_fundamentals else None,
+        min_operating_margin=min_operating_margin if apply_advanced_fundamentals else None,
+        min_free_cashflow=(min_free_cashflow_m * 1_000_000) if apply_advanced_fundamentals else None,
+        max_debt_to_equity=max_debt_to_equity if apply_advanced_fundamentals else None,
+        min_current_ratio=min_current_ratio if apply_advanced_fundamentals else None,
+        min_return_on_assets=min_roa if apply_advanced_fundamentals else None,
+        min_return_on_capital=min_roc if apply_advanced_fundamentals else None,
+        use_advanced_fundamentals=apply_advanced_fundamentals
         )
         progress_bar.progress(50)
         
@@ -626,6 +708,9 @@ with tab_analyse:
                 block += f"\n🏢 {stock.get('name', 'N/A')} ({stock.get('symbol', 'N/A')}) | Secteur: {stock.get('sector', 'N/A')}"
                 block += f"\n💰 PRIX ACTUEL: {stock.get('current_price_eur', 'N/A')} €"
                 block += f"\n📊 CROISSANCE CA (par an, dernière année): {stock.get('revenue_growth', 0)}% | ROE: {stock.get('roe', 0)}%"
+                block += f"\n📈 Marges: nette={stock.get('net_margin', 'N/A')}% | brute={stock.get('gross_margin', 'N/A')}% | opérationnelle={stock.get('operating_margin', 'N/A')}%"
+                block += f"\n💵 FCF: {stock.get('free_cashflow', 'N/A')} | Debt/Equity: {stock.get('debt_to_equity', 'N/A')} | Current Ratio: {stock.get('current_ratio', 'N/A')}"
+                block += f"\n🏦 ROA: {stock.get('return_on_assets', 'N/A')}% | ROC: {stock.get('return_on_capital', 'N/A')}%"
                 block += f"\n🎯 ZONE D'ACHAT: {stock.get('buy_zone_low_eur', 'N/A')} € - {stock.get('buy_zone_high_eur', 'N/A')} €"
                 block += f"\n🤖 ANALYSE IA:\n{avis}\n"
                 block += f"\n{'-'*70}\n"
@@ -868,6 +953,14 @@ with tab_analyse:
                 'Croissance Bénéfices (%/an)': f"{stock.get('earnings_growth', 0):.1f}",
                 'ROE (%)': f"{stock.get('roe', 0):.1f}",
                 'Marge (%)': f"{stock.get('profit_margin', 0):.1f}",
+                'Marge nette (%)': stock.get('net_margin', 'N/A'),
+                'Marge brute (%)': stock.get('gross_margin', 'N/A'),
+                'Marge op. (%)': stock.get('operating_margin', 'N/A'),
+                'FCF': stock.get('free_cashflow', 'N/A'),
+                'Debt/Equity': stock.get('debt_to_equity', 'N/A'),
+                'Current Ratio': stock.get('current_ratio', 'N/A'),
+                'ROA (%)': stock.get('return_on_assets', 'N/A'),
+                'ROC (%)': stock.get('return_on_capital', 'N/A'),
                 'PER': stock.get('pe', 'N/A'),
                 'PEG': stock.get('peg', 'N/A'),
                 'RSI': stock.get('rsi', 'N/A'),
@@ -912,6 +1005,16 @@ with tab_analyse:
                     st.write(f"**ROA:** {stock.get('return_on_assets', 'N/A')}%")
                 if stock.get('return_on_capital') is not None:
                     st.write(f"**ROC:** {stock.get('return_on_capital', 'N/A')}%")
+                if stock.get('operating_margin') is not None:
+                    st.write(f"**Marge opérationnelle:** {stock.get('operating_margin', 'N/A')}%")
+                if stock.get('free_cashflow') is not None:
+                    st.write(f"**Free Cash Flow:** {stock.get('free_cashflow', 'N/A')}")
+                if stock.get('operating_cashflow') is not None:
+                    st.write(f"**Cash flow opérationnel:** {stock.get('operating_cashflow', 'N/A')}")
+                if stock.get('debt_to_equity') is not None:
+                    st.write(f"**Debt/Equity:** {stock.get('debt_to_equity', 'N/A')}")
+                if stock.get('current_ratio') is not None:
+                    st.write(f"**Current Ratio:** {stock.get('current_ratio', 'N/A')}")
                 st.write(f"**PER:** {stock.get('pe', 'N/A')}")
                 st.write(f"**PEG:** {stock.get('peg', 'N/A')}")
                 st.write(f"**P/B:** {stock.get('price_to_book', 'N/A')}")

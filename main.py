@@ -63,6 +63,16 @@ MIN_PE_RATIO = 10               # PER > 10 (DURCI)
 MIN_ROE = 0.15                  # ROE > 15% (DURCI - rentabilité très solide)
 MIN_PROFIT_MARGIN = 0.08        # Marge bénéficiaire > 8% (DURCI - fondamentaux très solides)
 
+# Filtres fondamentaux avancés (valeurs par défaut, ajustables via l'UI)
+MIN_NET_MARGIN = 0.05           # Marge nette > 5%
+MIN_GROSS_MARGIN = 0.25         # Marge brute > 25%
+MIN_OPERATING_MARGIN = 0.08     # Marge opérationnelle > 8%
+MIN_FREE_CASHFLOW = 0           # Free Cash Flow positif
+MAX_DEBT_TO_EQUITY = 2.0        # Dette / Fonds propres < 2
+MIN_CURRENT_RATIO = 1.0         # Current ratio > 1
+MIN_ROA = 0.03                  # ROA > 3%
+MIN_ROC = 0.05                  # ROC > 5%
+
 # Limite de scan (augmenté pour analyser plus d'actions)
 SCAN_LIMIT = 2000  # Recherche très large et complète
 
@@ -355,7 +365,26 @@ def get_canada_tickers():
         return ['RY.TO', 'TD.TO', 'BNS.TO', 'SHOP.TO']
 
 # --- 4. LE TAMIS (FILTRE) - PRIORITÉ CROISSANCE ET FONDAMENTAUX SOLIDES ---
-def screen_stocks(tickers, min_revenue_growth=None, min_earnings_growth=None, min_roe=None, min_profit_margin=None, min_pe_ratio=None, max_pe_ratio=None, min_peg_ratio=None, max_peg_ratio=None):
+def screen_stocks(
+    tickers,
+    min_revenue_growth=None,
+    min_earnings_growth=None,
+    min_roe=None,
+    min_profit_margin=None,
+    min_pe_ratio=None,
+    max_pe_ratio=None,
+    min_peg_ratio=None,
+    max_peg_ratio=None,
+    min_net_margin=None,
+    min_gross_margin=None,
+    min_operating_margin=None,
+    min_free_cashflow=None,
+    max_debt_to_equity=None,
+    min_current_ratio=None,
+    min_return_on_assets=None,
+    min_return_on_capital=None,
+    use_advanced_fundamentals=True
+):
     import time
     # Utiliser les paramètres personnalisés si fournis, sinon les valeurs par défaut
     if min_revenue_growth is None:
@@ -374,6 +403,23 @@ def screen_stocks(tickers, min_revenue_growth=None, min_earnings_growth=None, mi
         min_peg_ratio = MIN_PEG_RATIO
     if max_peg_ratio is None:
         max_peg_ratio = MAX_PEG_RATIO
+    if use_advanced_fundamentals:
+        if min_net_margin is None:
+            min_net_margin = MIN_NET_MARGIN
+        if min_gross_margin is None:
+            min_gross_margin = MIN_GROSS_MARGIN
+        if min_operating_margin is None:
+            min_operating_margin = MIN_OPERATING_MARGIN
+        if min_free_cashflow is None:
+            min_free_cashflow = MIN_FREE_CASHFLOW
+        if max_debt_to_equity is None:
+            max_debt_to_equity = MAX_DEBT_TO_EQUITY
+        if min_current_ratio is None:
+            min_current_ratio = MIN_CURRENT_RATIO
+        if min_return_on_assets is None:
+            min_return_on_assets = MIN_ROA
+        if min_return_on_capital is None:
+            min_return_on_capital = MIN_ROC
     
     candidates = []
     print(f"🕵️  Démarrage du scan sur {len(tickers)} actions...")
@@ -478,6 +524,34 @@ def screen_stocks(tickers, min_revenue_growth=None, min_earnings_growth=None, mi
                 if DEBUG_MODE:
                     print(f"   ❌ {ticker} rejeté: Small cap (Market Cap: {market_cap/1_000_000_000:.2f}B < {MIN_MARKET_CAP/1_000_000_000:.0f}B)")
                 continue
+
+            if use_advanced_fundamentals:
+                # Filtre fondamentaux avancés (seulement si les données existent)
+                advanced_ok = True
+                if net_margin is not None:
+                    advanced_ok = advanced_ok and (net_margin >= min_net_margin)
+                if gross_margin is not None:
+                    advanced_ok = advanced_ok and (gross_margin >= min_gross_margin)
+                if operating_margin is not None:
+                    advanced_ok = advanced_ok and (operating_margin >= min_operating_margin)
+                if free_cashflow is not None:
+                    advanced_ok = advanced_ok and (free_cashflow >= min_free_cashflow)
+                if debt_to_equity is not None:
+                    advanced_ok = advanced_ok and (debt_to_equity <= max_debt_to_equity)
+                if current_ratio is not None:
+                    advanced_ok = advanced_ok and (current_ratio >= min_current_ratio)
+                if return_on_assets is not None:
+                    advanced_ok = advanced_ok and (return_on_assets >= min_return_on_assets)
+                if return_on_capital is not None:
+                    advanced_ok = advanced_ok and (return_on_capital >= min_return_on_capital)
+
+                if not advanced_ok:
+                    if DEBUG_MODE and ticker in ['AAPL', 'MSFT', 'GOOGL', 'NVDA', 'TSLA', 'META', 'AMZN']:
+                        print(f"\n❌ {ticker} rejeté (fondamentaux avancés):")
+                        print(f"   Marge nette: {net_margin} | Marge brute: {gross_margin} | Marge op: {operating_margin}")
+                        print(f"   FCF: {free_cashflow} | Debt/Equity: {debt_to_equity} | Current: {current_ratio}")
+                        print(f"   ROA: {return_on_assets} | ROC: {return_on_capital}")
+                    continue
             
             # Si on arrive ici, l'action passe les critères
             candidates.append({
