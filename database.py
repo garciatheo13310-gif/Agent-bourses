@@ -393,6 +393,41 @@ def get_user_email(user_id: int) -> Optional[str]:
         pass
     return None
 
+def delete_user(user_id: int) -> bool:
+    """Supprime un utilisateur et ses données associées"""
+    if not user_id:
+        return False
+    
+    try:
+        if is_using_supabase():
+            client = get_supabase_client()
+            
+            # Supprimer les données dépendantes d'abord
+            client.table('saved_analyses').delete().eq('user_id', user_id).execute()
+            client.table('portfolios').delete().eq('user_id', user_id).execute()
+            client.table('rate_limiting').delete().eq('user_id', user_id).execute()
+            
+            # Supprimer l'utilisateur
+            result = client.table('users').delete().eq('id', user_id).execute()
+            if hasattr(result, 'data'):
+                return len(result.data) > 0
+            return True
+        else:
+            conn = get_sqlite_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('DELETE FROM saved_analyses WHERE user_id = ?', (user_id,))
+            cursor.execute('DELETE FROM portfolios WHERE user_id = ?', (user_id,))
+            cursor.execute('DELETE FROM rate_limiting WHERE user_id = ?', (user_id,))
+            cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+            
+            conn.commit()
+            conn.close()
+            return True
+    except Exception as e:
+        print(f"Erreur suppression utilisateur: {e}")
+        return False
+
 def get_user_portfolio(user_id: int) -> Dict:
     """Récupère le portefeuille d'un utilisateur"""
     try:
