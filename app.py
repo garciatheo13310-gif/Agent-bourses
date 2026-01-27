@@ -376,6 +376,9 @@ st.markdown("""
 col1, col2 = st.columns([6, 1])
 with col1:
         st.markdown(f"👤 **Connecté en tant que:** {st.session_state.get('username', 'Utilisateur')}")
+with col2:
+        if st.button("Se déconnecter", use_container_width=True):
+            logout()
 
 # Afficher le type de base de données utilisée
 try:
@@ -397,6 +400,46 @@ SUPABASE_KEY = "sb_publishable_tuyj9qXdFw5SnVVUMKAGdw_1mDDyf27"''', language="to
             st.write("4. Redéployez l'application")
 except Exception as e:
     st.markdown(f"💾 **Base de données:** ⚠️ Erreur de détection")
+
+# Section Mon compte (désabonnement)
+with st.expander("⚙️ Mon compte"):
+    st.caption("Gérez votre compte et votre désabonnement.")
+    user_email = None
+    delete_user = None
+    try:
+        from database import get_user_email, delete_user
+        if st.session_state.get('user_id'):
+            user_email = get_user_email(st.session_state['user_id'])
+    except Exception:
+        user_email = None
+    
+    if user_email:
+        st.markdown(f"**Email:** {user_email}")
+    
+    st.markdown(
+        "Pour vous désabonner, vous pouvez supprimer votre compte. "
+        "Cette action est **définitive** et efface votre portefeuille et vos analyses."
+    )
+    
+    confirmation = st.text_input(
+        "Tapez SUPPRIMER pour confirmer",
+        key="delete_account_confirm"
+    )
+    
+    if st.button("🧾 Se désabonner (supprimer mon compte)", type="secondary", key="delete_account_btn"):
+        if confirmation.strip().upper() != "SUPPRIMER":
+            st.error("⚠️ Veuillez taper SUPPRIMER pour confirmer.")
+        elif not delete_user:
+            st.error("❌ Fonction de suppression indisponible. Réessayez plus tard.")
+        elif not st.session_state.get('user_id'):
+            st.error("❌ Impossible d'identifier votre compte.")
+        else:
+            success = delete_user(st.session_state['user_id'])
+            if success:
+                st.success("✅ Votre compte a été supprimé. Vous êtes désabonné.")
+                logout()
+            else:
+                st.error("❌ Erreur lors de la suppression du compte. Réessayez.")
 
 # Sidebar - Paramètres avec style épuré
 st.sidebar.markdown("""
